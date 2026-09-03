@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AboutPage } from './components/AboutPage'
 import { DashboardPage } from './components/DashboardPage'
-import { Header, type PageId } from './components/Header'
+import { HeaderIntegration, type PageId } from './components/HeaderIntegration'
 import { LoadingState } from './components/LoadingState'
 import { dashboardRepository } from './data/dashboardRepository'
+import { detectDashboardKind, interpretDashboardSearch, normalizeSearchText } from './data/dashboardSearch'
 import type { DashboardDataset } from './types/dashboard'
 
 const allowedPages: PageId[] = ['sobre', 'ibid', 'clp-estados', 'clp-municipios']
@@ -31,6 +32,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [fontScale, setFontScale] = useState(initialFontScale)
   const requestSequence = useRef(0)
+  const skipNextPageLoad = useRef(false)
 
   useEffect(() => {
     const syncHash = () => setPage(pageFromHash())
@@ -55,6 +57,10 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (skipNextPageLoad.current) {
+      skipNextPageLoad.current = false
+      return
+    }
     if (page === 'sobre') {
       requestSequence.current += 1
       setDashboard(null)
@@ -90,9 +96,65 @@ export default function App() {
     else window.location.hash = `/${next}`
   }
 
+  const applySmartSearch = useCallback(async (command: string) => {
+    const target = detectDashboardKind(command, page)
+    if (target === 'sobre') {
+      navigate('sobre')
+      return
+    }
+
+    const requestId = ++requestSequence.current
+    setLoading(true)
+    setError(null)
+    try {
+      let base = dashboard?.kind === target ? dashboard : await dashboardRepository.getDashboard(target)
+      let interpretation = interpretDashboardSearch(command, base)
+
+      if (target === 'clp-municipios') {
+        const currentState = base.filters.find((filter) => filter.id === 'state')?.value
+        const requestedState = interpretation.filters.state
+        if (requestedState && requestedState !== currentState) {
+          base = await dashboardRepository.getDashboard(target, { state: requestedState })
+          interpretation = interpretDashboardSearch(command, base)
+        }
+      }
+
+      const explicitlyNamesPanel = /\b(ibid|clp|municipio|municipios|municipal)\b/.test(normalizeSearchText(command))
+      if (!interpretation.matchedFilters.length && !explicitlyNamesPanel) {
+        throw new Error('Não reconheci território, região, ano ou métrica nessa busca.')
+      }
+
+      const value = await dashboardRepository.getDashboard(target, interpretation.filters)
+      if (requestId !== requestSequence.current) return
+
+      if (page !== target) {
+        skipNextPageLoad.current = true
+        window.history.pushState(null, '', `#/${target}`)
+        setPage(target)
+      }
+      setDashboard(value)
+    } catch (reason) {
+      if (requestId === requestSequence.current) {
+        const message = reason instanceof Error ? reason.message : 'Não foi possível aplicar os filtros da busca.'
+        setError(message)
+        throw new Error(message)
+      }
+    } finally {
+      if (requestId === requestSequence.current) setLoading(false)
+    }
+  }, [dashboard, page])
+
   return (
     <div className="min-h-screen bg-canvas text-ink transition-colors dark:bg-slate-950 dark:text-slate-100">
-      <Header dataMeta={dashboard?.meta} fontScale={fontScale} onFontScaleChange={setFontScale} onNavigate={navigate} page={page} />
+      <HeaderIntegration
+        dataMeta={dashboard?.meta}
+        fontScale={fontScale}
+        onFontScaleChange={setFontScale}
+        onNavigate={navigate}
+        onSmartSearch={applySmartSearch}
+        page={page}
+      />
+      {loading && page === 'sobre' && <LoadingState label="Interpretando busca e carregando dados" overlay />}
       {page !== 'sobre' && loading && !dashboard && <div className="page-shell"><LoadingState label="Carregando dados do painel" /></div>}
       {page !== 'sobre' && error && !dashboard && (
         <div className="page-shell">

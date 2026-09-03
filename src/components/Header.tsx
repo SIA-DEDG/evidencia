@@ -12,6 +12,7 @@ interface HeaderProps {
   }
   onNavigate: (page: PageId) => void
   onFontScaleChange: (scale: number) => void
+  onSmartSearch: (command: string) => Promise<void>
 }
 
 interface SearchResult {
@@ -46,11 +47,13 @@ function normalizeText(value: string) {
     .trim()
 }
 
-export function Header({ page, fontScale, dataMeta, onNavigate, onFontScaleChange }: HeaderProps) {
+export function Header({ page, fontScale, dataMeta, onNavigate, onFontScaleChange, onSmartSearch }: HeaderProps) {
   const [projectsMenuOpen, setProjectsMenuOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [activeResult, setActiveResult] = useState(0)
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState('')
   const [showBackToTop, setShowBackToTop] = useState(false)
   const projectsMenuRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLDivElement>(null)
@@ -79,21 +82,42 @@ export function Header({ page, fontScale, dataMeta, onNavigate, onFontScaleChang
     onNavigate(result.id)
   }
 
+  async function applySmartSearch() {
+    if (normalizeText(query).length < 2 || searching) return
+    setSearching(true)
+    setSearchError('')
+    try {
+      await onSmartSearch(query)
+      setQuery('')
+      setSearchOpen(false)
+    } catch (reason) {
+      setSearchError(reason instanceof Error ? reason.message : 'Não foi possível interpretar a busca.')
+    } finally {
+      setSearching(false)
+    }
+  }
+
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Escape') {
       setSearchOpen(false)
       return
     }
-    if (!searchOpen || searchResults.length === 0) return
+    const hasSmartAction = normalizeText(query).length >= 2
+    const resultCount = searchResults.length + (hasSmartAction ? 1 : 0)
+    if (!searchOpen || resultCount === 0) return
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      setActiveResult((index) => (index + 1) % searchResults.length)
+      setActiveResult((index) => (index + 1) % resultCount)
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
-      setActiveResult((index) => (index - 1 + searchResults.length) % searchResults.length)
+      setActiveResult((index) => (index - 1 + resultCount) % resultCount)
     } else if (event.key === 'Enter') {
       event.preventDefault()
-      selectSearchResult(searchResults[activeResult])
+      if (hasSmartAction && activeResult === 0) void applySmartSearch()
+      else {
+        const result = searchResults[activeResult - (hasSmartAction ? 1 : 0)]
+        if (result) selectSearchResult(result)
+      }
     }
   }
 
@@ -188,55 +212,77 @@ export function Header({ page, fontScale, dataMeta, onNavigate, onFontScaleChang
             alt="Secretaria de Inteligência Artificial, Economia Digital, Ciência, Tecnologia e Inovação — Governo do Piauí"
             className="header-logo"
             height="63"
-            src="/assets/sia-logo.png"
+            src="/assets/logo.svg"
             width="317"
           />
 
-          <div className="header-search" ref={searchRef}>
-            <div className={searchOpen ? 'header-search-field header-search-field-open' : 'header-search-field'}>
-              <Search aria-hidden="true" size={20} />
-              <input
-                aria-autocomplete="list"
-                aria-controls="site-search-results"
-                aria-expanded={searchOpen}
-                aria-label="Buscar seções do painel"
-                onChange={(event) => {
-                  setQuery(event.target.value)
-                  setActiveResult(0)
-                  setSearchOpen(Boolean(event.target.value))
-                }}
-                onFocus={() => setSearchOpen(Boolean(query))}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="Buscar no EvidêncIA"
-                role="combobox"
-                type="search"
-                value={query}
-              />
-            </div>
-
-            {searchOpen && (
-              <div className="header-search-results" id="site-search-results" role="listbox">
-                {searchResults.length > 0 ? searchResults.map((result, index) => (
-                  <button
-                    aria-selected={index === activeResult}
-                    className={index === activeResult ? 'header-search-result header-search-result-active' : 'header-search-result'}
-                    key={result.id}
-                    onClick={() => selectSearchResult(result)}
-                    onMouseEnter={() => setActiveResult(index)}
-                    role="option"
-                    type="button"
-                  >
-                    <span className="header-search-result-icon"><MapPin aria-hidden="true" size={16} /></span>
-                    <span className="min-w-0">
-                      <strong>{result.title}</strong>
-                      <small>{result.subtitle}</small>
-                    </span>
-                  </button>
-                )) : (
-                  <p>Nenhum resultado encontrado.</p>
-                )}
+          <div className="header-search">
+            <div className="header-search-root" ref={searchRef}>
+              <div className={searchOpen ? 'header-search-field header-search-field-open' : 'header-search-field'}>
+                <Search aria-hidden="true" size={20} />
+                <input
+                  aria-autocomplete="list"
+                  aria-controls="site-search-results"
+                  aria-expanded={searchOpen}
+                  aria-label="Buscar seções do painel"
+                  onChange={(event) => {
+                    setQuery(event.target.value)
+                    setActiveResult(0)
+                    setSearchError('')
+                    setSearchOpen(Boolean(event.target.value))
+                  }}
+                  onFocus={() => setSearchOpen(Boolean(query))}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Buscar no EvidêncIA"
+                  role="combobox"
+                  type="search"
+                  value={query}
+                />
               </div>
-            )}
+
+              {searchOpen && (
+                <div className="header-search-results" id="site-search-results" role="listbox">
+                  {normalizeText(query).length >= 2 && (
+                    <button
+                      aria-selected={activeResult === 0}
+                      className={activeResult === 0 ? 'header-search-result header-search-result-smart header-search-result-active' : 'header-search-result header-search-result-smart'}
+                      disabled={searching}
+                      onClick={() => void applySmartSearch()}
+                      onMouseEnter={() => setActiveResult(0)}
+                      role="option"
+                      type="button"
+                    >
+                      <span className="header-search-result-icon"><Search aria-hidden="true" size={16} /></span>
+                      <span className="min-w-0">
+                        <strong>{searching ? 'Aplicando filtros…' : 'Aplicar filtros desta busca'}</strong>
+                        <small>Reconhece painel, localidade, comparação, região, ano e métrica</small>
+                      </span>
+                    </button>
+                  )}
+                  {searchResults.map((result, index) => (
+                    <button
+                      aria-selected={index + 1 === activeResult}
+                      className={index + 1 === activeResult ? 'header-search-result header-search-result-active' : 'header-search-result'}
+                      key={result.id}
+                      onClick={() => selectSearchResult(result)}
+                      onMouseEnter={() => setActiveResult(index + 1)}
+                      role="option"
+                      type="button"
+                    >
+                      <span className="header-search-result-icon"><MapPin aria-hidden="true" size={16} /></span>
+                      <span className="min-w-0">
+                        <strong>{result.title}</strong>
+                        <small>{result.subtitle}</small>
+                      </span>
+                    </button>
+                  ))}
+                  {normalizeText(query).length < 2 && (
+                    <p>Nenhum resultado encontrado.</p>
+                  )}
+                  {searchError && <p className="header-search-error">{searchError}</p>}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
