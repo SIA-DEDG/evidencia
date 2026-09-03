@@ -10,7 +10,7 @@
     "start": "vite preview"
   },
   "dependencies": {
-    "@sia-dedg/shared-ui": "0.1.4",
+    "@sia-dedg/shared-ui": "0.1.6",
     "@vitejs/plugin-react": "^4.3.4",
     "chart.js": "^4.4.7",
     "lucide-react": "^0.468.0",
