@@ -6,7 +6,7 @@ Este documento descreve a integração de `@sia-dedg/shared-ui` no EvidêncIA e 
 
 Integração validada em 3 de setembro de 2026 com:
 
-- `@sia-dedg/shared-ui@0.1.0` instalado diretamente do GitHub Packages;
+- `@sia-dedg/shared-ui@0.1.1` instalado diretamente do GitHub Packages;
 - versão fixada em `package.json` e registrada em `package-lock.json`;
 - build TypeScript e Vite concluído sem erros;
 - nenhum token armazenado no repositório;
@@ -58,7 +58,7 @@ O comando deve retornar seu usuário pessoal do GitHub. Use um PAT **classic** c
 Instale uma versão explícita para evitar alterações involuntárias:
 
 ```powershell
-npm install @sia-dedg/shared-ui@0.1.0 --save-exact
+npm install @sia-dedg/shared-ui@0.1.1 --save-exact
 ```
 
 O `package.json` ficará com:
@@ -66,7 +66,7 @@ O `package.json` ficará com:
 ```json
 {
   "dependencies": {
-    "@sia-dedg/shared-ui": "0.1.0"
+    "@sia-dedg/shared-ui": "0.1.1"
   }
 }
 ```
