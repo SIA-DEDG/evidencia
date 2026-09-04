@@ -14,7 +14,7 @@ import type { DashboardDataset, DashboardKind } from '../types/dashboard'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
-export function SeriesChart({ chart, kind, source }: { chart: DashboardDataset['chart']; kind: DashboardKind; source: string }) {
+export function SeriesChart({ chart, hasComparison, kind, source }: { chart: DashboardDataset['chart']; hasComparison: boolean; kind: DashboardKind; source: string }) {
   const isIbid = kind === 'ibid'
   const period = chart.years.length === 1 ? String(chart.years[0]) : `${chart.years[0]}–${chart.years.at(-1)}`
   const pointRadius = chart.years.length === 1 ? 4 : 0
@@ -33,8 +33,12 @@ export function SeriesChart({ chart, kind, source }: { chart: DashboardDataset['
             labels: chart.years,
             datasets: [
               { label: chart.primaryLabel, data: chart.primary, borderColor: '#08325e', backgroundColor: 'rgba(8,50,94,.1)', borderWidth: 3, pointRadius, tension: 0.42 },
-              { label: chart.comparisonLabel, data: chart.comparison, borderColor: '#8db2ff', backgroundColor: 'rgba(141,178,255,.12)', borderWidth: 3, pointRadius, tension: 0.42, hidden: chart.comparison.every((value) => value === null) },
+              ...(hasComparison ? [{ label: chart.comparisonLabel, data: chart.comparison, borderColor: '#8db2ff', backgroundColor: 'rgba(141,178,255,.12)', borderWidth: 3, pointRadius, tension: 0.42 }] : []),
               { label: chart.regionalLabel, data: chart.regional, borderColor: '#6e7781', borderDash: [4, 4], borderWidth: 2, pointRadius, tension: 0.42 },
+              ...(hasComparison && chart.comparisonRegional.some((value) => value !== null)
+                ? [{ label: chart.comparisonRegionalLabel, data: chart.comparisonRegional, borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,.1)', borderDash: [4, 4], borderWidth: 2, pointRadius, tension: 0.42 }]
+                : []),
+              { label: 'Média do Brasil', data: chart.nationalAverage, borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,.1)', borderDash: [7, 4], borderWidth: 2, pointRadius, tension: 0.42 },
             ],
           }}
           options={{

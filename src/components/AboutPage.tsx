@@ -1,6 +1,37 @@
+import { useRef, useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 
 export function AboutPage() {
+  const studiesRef = useRef<HTMLDivElement>(null)
+  const [activeStudy, setActiveStudy] = useState(0)
+  const studyCount = 2
+
+  const scrollToStudy = (index: number) => {
+    const carousel = studiesRef.current
+    const slide = carousel?.children.item(index) as HTMLElement | null
+
+    if (!carousel || !slide) return
+
+    carousel.scrollTo({ left: slide.offsetLeft, behavior: 'smooth' })
+  }
+
+  const updateActiveStudy = () => {
+    const carousel = studiesRef.current
+
+    if (!carousel) return
+
+    const carouselCenter = carousel.scrollLeft + carousel.clientWidth / 2
+    const slides = Array.from(carousel.children) as HTMLElement[]
+    const closestStudy = slides.reduce((closest, slide, index) => {
+      const slideCenter = slide.offsetLeft + slide.clientWidth / 2
+      const distance = Math.abs(carouselCenter - slideCenter)
+
+      return distance < closest.distance ? { index, distance } : closest
+    }, { index: 0, distance: Number.POSITIVE_INFINITY })
+
+    setActiveStudy(closestStudy.index)
+  }
+
   return (
     <main className="page-shell">
       <section className="purpose-card">
@@ -24,7 +55,14 @@ export function AboutPage() {
           Estrutura hierárquica de cada estudo, conforme metodologia divulgada por cada instituição responsável.
         </p>
 
-        <div className="about-study-grid about-study-grid-two mx-auto mt-5">
+        <div
+          aria-label="Estudos disponíveis"
+          className="about-study-grid about-study-grid-two mx-auto mt-5"
+          onScroll={updateActiveStudy}
+          ref={studiesRef}
+          role="region"
+          tabIndex={0}
+        >
           <article className="study-card">
             <header className="flex min-h-[66px] items-start justify-between gap-4">
               <div>
@@ -94,6 +132,39 @@ export function AboutPage() {
             </button>
           </article>
 
+        </div>
+        <div aria-label="Navegação dos estudos" className="about-carousel-controls sm:hidden">
+          <button
+            aria-label="Ver estudo anterior"
+            className="about-carousel-arrow"
+            disabled={activeStudy === 0}
+            onClick={() => scrollToStudy(activeStudy - 1)}
+            type="button"
+          >
+            <span aria-hidden="true">←</span>
+          </button>
+          <div className="flex items-center gap-2">
+            {Array.from({ length: studyCount }, (_, index) => (
+              <button
+                aria-label={`Ir para o estudo ${index + 1}`}
+                aria-current={activeStudy === index ? 'true' : undefined}
+                className={activeStudy === index ? 'about-carousel-dot about-carousel-dot-active' : 'about-carousel-dot'}
+                key={index}
+                onClick={() => scrollToStudy(index)}
+                type="button"
+              />
+            ))}
+          </div>
+          <span aria-live="polite" className="sr-only">Estudo {activeStudy + 1} de {studyCount}</span>
+          <button
+            aria-label="Ver próximo estudo"
+            className="about-carousel-arrow"
+            disabled={activeStudy === studyCount - 1}
+            onClick={() => scrollToStudy(activeStudy + 1)}
+            type="button"
+          >
+            <span aria-hidden="true">→</span>
+          </button>
         </div>
       </section>
     </main>

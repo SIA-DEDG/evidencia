@@ -1,4 +1,4 @@
-# EvidêncIA Inovação
+# EvidencIA Inovação
 
 Dashboard responsivo implementado em React, TypeScript, Tailwind CSS e Chart.js a partir do arquivo Figma do projeto SIA/DEDG.
 

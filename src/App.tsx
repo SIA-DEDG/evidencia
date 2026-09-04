@@ -177,7 +177,7 @@ export default function App() {
           {error && <div className="page-shell pt-0 text-sm text-red-700" role="alert">{error}</div>}
         </div>
       )}
-      <footer className="mt-14 border-t border-line px-5 py-6 text-center text-xs text-muted dark:border-slate-800 dark:text-slate-400">EvidêncIA Inovação · Dados oficiais consolidados</footer>
+      <footer className="mt-14 border-t border-line px-5 py-6 text-center text-xs text-muted dark:border-slate-800 dark:text-slate-400">EvidencIA Inovação · Dados oficiais consolidados</footer>
     </div>
   )
 }

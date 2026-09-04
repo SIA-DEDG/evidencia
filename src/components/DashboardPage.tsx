@@ -18,6 +18,7 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
   const primaryLabel = data.summary[0]?.title ?? (municipal ? 'Município principal' : 'Estado principal')
   const comparisonLabel = data.summary[1]?.title ?? (municipal ? 'Município de comparação' : 'Estado de comparação')
   const metricLabel = data.summary[0]?.metric ?? 'Nota Geral'
+  const hasComparison = Boolean(data.filters.find((filter) => filter.id === 'comparison')?.value)
 
   return (
     <main className="page-shell">
@@ -55,10 +56,11 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
       <div className="mt-5"><Filters filters={data.filters} onChange={onFiltersChange} /></div>
       <div className="mt-[30px]"><SummaryCards kind={data.kind} labels={data.rankingLabels} national={data.nationalRanking} regional={data.regionalRanking} summary={data.summary} /></div>
       <div className="dashboard-visual-grid mt-[30px]">
-        <SeriesChart chart={data.chart} kind={data.kind} source={data.meta.source} />
+        <SeriesChart chart={data.chart} hasComparison={hasComparison} kind={data.kind} source={data.meta.source} />
         <RankingHistory
           comparison={data.comparisonHistory}
           comparisonLabel={comparisonLabel}
+          hasComparison={hasComparison}
           metricLabel={metricLabel}
           primary={data.history}
           primaryLabel={primaryLabel}

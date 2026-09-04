@@ -63,10 +63,13 @@ export interface DashboardDataset {
     years: number[]
     primary: Array<number | null>
     comparison: Array<number | null>
+    nationalAverage: Array<number | null>
     regional: Array<number | null>
+    comparisonRegional: Array<number | null>
     primaryLabel: string
     comparisonLabel: string
     regionalLabel: string
+    comparisonRegionalLabel: string
     yMax: number
   }
   rankingLabels: {

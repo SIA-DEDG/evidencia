@@ -56,7 +56,7 @@ export function HeaderIntegration({
       onHome={() => onNavigate('sobre')}
       onNavigation={(id) => onNavigate(id as PageId)}
       search={search}
-      searchPlaceholder="Buscar no EvidêncIA"
+      searchPlaceholder="Buscar no EvidencIA"
       utilityLabel="Site SIA"
     />
   )

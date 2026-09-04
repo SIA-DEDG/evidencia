@@ -1,12 +1,12 @@
 # Integração do header compartilhado SIA
 
-Este documento descreve a integração de `@sia-dedg/shared-ui` no EvidêncIA e o procedimento para repetir a configuração nos demais projetos da organização `SIA-DEDG`.
+Este documento descreve a integração de `@sia-dedg/shared-ui` no EvidencIA e o procedimento para repetir a configuração nos demais projetos da organização `SIA-DEDG`.
 
-## Estado da integração no EvidêncIA
+## Estado da integração no EvidencIA
 
 Integração validada em 3 de setembro de 2026 com:
 
-- `@sia-dedg/shared-ui@0.1.9` instalado diretamente do GitHub Packages;
+- `@sia-dedg/shared-ui@0.1.11` instalado diretamente do GitHub Packages;
 - versão fixada em `package.json` e registrada em `package-lock.json`;
 - build TypeScript e Vite concluído sem erros;
 - nenhum token armazenado no repositório;
@@ -58,7 +58,7 @@ O comando deve retornar seu usuário pessoal do GitHub. Use um PAT **classic** c
 Instale uma versão explícita para evitar alterações involuntárias:
 
 ```powershell
-npm install @sia-dedg/shared-ui@0.1.9 --save-exact
+npm install @sia-dedg/shared-ui@0.1.11 --save-exact
 ```
 
 O `package.json` ficará com:
@@ -66,14 +66,14 @@ O `package.json` ficará com:
 ```json
 {
   "dependencies": {
-    "@sia-dedg/shared-ui": "0.1.9"
+    "@sia-dedg/shared-ui": "0.1.11"
   }
 }
 ```
 
 O `package-lock.json` gerado deve ser commitado.
 
-## 4. Arquivos usados no EvidêncIA
+## 4. Arquivos usados no EvidencIA
 
 - `src/components/HeaderIntegration.tsx`: traduz o estado e as rotas do sistema para as propriedades públicas de `SiaHeader`.
 - `src/data/headerSearchAdapter.ts`: adapta a busca por páginas e a busca inteligente existente para `HeaderSearchAdapter`.
@@ -104,7 +104,7 @@ O CSS do componente já é compilado a partir do Tailwind e possui classes prefi
   activeNavigationId={activeNavigationId}
   onNavigation={onNavigation}
   search={searchAdapter}
-  searchPlaceholder="Buscar no EvidêncIA"
+  searchPlaceholder="Buscar no EvidencIA"
   fontScale={fontScale}
   fontScales={[0.9, 1, 1.1, 1.2]}
   onFontScaleChange={onFontScaleChange}
@@ -150,7 +150,7 @@ Se o novo projeto ainda não existir em `HeaderProjectId` e `SIA_PROJECTS`, prim
 Uma publicação nova não atualiza os consumidores automaticamente. Em cada projeto, execute:
 
 ```powershell
-npm install @sia-dedg/shared-ui@0.1.9 --save-exact
+npm install @sia-dedg/shared-ui@0.1.11 --save-exact
 npm run build
 ```
 

@@ -31,15 +31,16 @@ interface RankingHistoryProps {
   comparison: RankingHistoryItem[]
   primaryLabel: string
   comparisonLabel: string
+  hasComparison: boolean
   metricLabel: string
   regionalLabel: string
 }
 
-export function RankingHistory({ primary, comparison, primaryLabel, comparisonLabel, metricLabel, regionalLabel }: RankingHistoryProps) {
+export function RankingHistory({ primary, comparison, primaryLabel, comparisonLabel, hasComparison, metricLabel, regionalLabel }: RankingHistoryProps) {
   return (
-    <aside className="ranking-history-grid" aria-label="Histórico de ranking">
+    <aside className={hasComparison ? 'ranking-history-grid' : 'ranking-history-grid ranking-history-grid-single'} aria-label="Histórico de ranking">
       <HistoryCard items={primary} metricLabel={metricLabel} regionalLabel={regionalLabel} title={primaryLabel} />
-      <HistoryCard items={comparison} metricLabel={metricLabel} regionalLabel={regionalLabel} title={comparisonLabel} />
+      {hasComparison && <HistoryCard items={comparison} metricLabel={metricLabel} regionalLabel={regionalLabel} title={comparisonLabel} />}
     </aside>
   )
 }

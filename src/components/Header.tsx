@@ -178,7 +178,7 @@ export function Header({ page, fontScale, dataMeta, onNavigate, onFontScaleChang
               {projectsMenuOpen && (
                 <div className="header-projects-popover" role="menu">
                   <button aria-checked="true" onClick={() => setProjectsMenuOpen(false)} role="menuitemradio" type="button">
-                    <span>EvidêncIA Inovação</span>
+                    <span>EvidencIA Inovação</span>
                     <Check aria-hidden="true" size={16} />
                   </button>
                 </div>
@@ -233,7 +233,7 @@ export function Header({ page, fontScale, dataMeta, onNavigate, onFontScaleChang
                   }}
                   onFocus={() => setSearchOpen(Boolean(query))}
                   onKeyDown={handleSearchKeyDown}
-                  placeholder="Buscar no EvidêncIA"
+                  placeholder="Buscar no EvidencIA"
                   role="combobox"
                   type="search"
                   value={query}
