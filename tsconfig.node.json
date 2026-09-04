@@ -3,8 +3,8 @@
     "composite": true,
     "target": "ES2022",
     "skipLibCheck": true,
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "noEmit": true
   },
   "include": ["vite.config.ts", "api", "server", "src/types/dashboard.ts"]

@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import pg from 'pg'
 import type { Plugin } from 'vite'
-import type { DashboardDataset, DashboardKind } from '../src/types/dashboard'
-import { DashboardService } from './dashboardService'
+import type { DashboardDataset, DashboardKind } from '../src/types/dashboard.js'
+import { DashboardService } from './dashboardService.js'
 
 const dashboardKinds = new Set<DashboardKind>(['ibid', 'clp-estados', 'clp-municipios'])
 const cacheTtlMs = 60_000

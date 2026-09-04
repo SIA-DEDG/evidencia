@@ -8,7 +8,7 @@ import type {
   RankingItem,
   SelectOption,
   SummaryMetric,
-} from '../src/types/dashboard'
+} from '../src/types/dashboard.js'
 
 type QueryValues = Record<string, string | undefined>
 
