@@ -1,7 +1,11 @@
 import { useRef, useState } from 'react'
-import { Construction, ExternalLink } from 'lucide-react'
+import { ArrowRight, Construction, ExternalLink } from 'lucide-react'
 
-export function AboutPage() {
+interface AboutPageProps {
+  onNavigate: (page: 'ibid' | 'clp-estados') => void
+}
+
+export function AboutPage({ onNavigate }: AboutPageProps) {
   const studiesRef = useRef<HTMLDivElement>(null)
   const [activeStudy, setActiveStudy] = useState(0)
   const studyCount = 2
@@ -101,9 +105,19 @@ export function AboutPage() {
               <div><dt className="inline font-semibold">Período: </dt><dd className="inline">2014 - 2025</dd></div>
               <div><dt className="inline font-semibold">Atualização: </dt><dd className="inline">Anual</dd></div>
             </dl>
-            <button className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-300" type="button" onClick={() => window.open('https://www.gov.br/inpi/pt-br/inpi-data/indice-brasil-de-inovacao-e-desenvolvimento-ibid')}>
-              Saiba mais sobre o IBID <ExternalLink size={13} />
-            </button>
+            <div className="study-card-actions">
+              <button className="study-card-primary-action" onClick={() => onNavigate('ibid')} type="button">
+                Ir para o painel IBID <ArrowRight aria-hidden="true" size={16} />
+              </button>
+              <a
+                className="study-card-secondary-action"
+                href="https://www.gov.br/inpi/pt-br/inpi-data/indice-brasil-de-inovacao-e-desenvolvimento-ibid"
+                rel="noreferrer"
+                target="_blank"
+              >
+                Saiba mais no site do IBID <ExternalLink aria-hidden="true" size={13} />
+              </a>
+            </div>
           </article>
 
           <article className="study-card">
@@ -135,9 +149,19 @@ export function AboutPage() {
               <div><dt className="inline font-semibold">Recorte: </dt><dd className="inline">Estados e Municípios</dd></div>
               <div><dt className="inline font-semibold">Atualização: </dt><dd className="inline">Anual</dd></div>
             </dl>
-            <button className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-300" type="button" onClick={() => window.open('https://rankingdecompetitividade.org.br/eleicoes/')}>
-              Saiba mais sobre o CLP <ExternalLink size={13} />
-            </button>
+            <div className="study-card-actions">
+              <button className="study-card-primary-action" onClick={() => onNavigate('clp-estados')} type="button">
+                Ir para o painel CLP <ArrowRight aria-hidden="true" size={16} />
+              </button>
+              <a
+                className="study-card-secondary-action"
+                href="https://rankingdecompetitividade.org.br/eleicoes/"
+                rel="noreferrer"
+                target="_blank"
+              >
+                Saiba mais no site do CLP <ExternalLink aria-hidden="true" size={13} />
+              </a>
+            </div>
           </article>
 
         </div>

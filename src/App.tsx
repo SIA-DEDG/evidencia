@@ -165,7 +165,7 @@ export default function App() {
           </div>
         </div>
       )}
-      {page === 'sobre' && <AboutPage />}
+      {page === 'sobre' && <AboutPage onNavigate={navigate} />}
       {dashboard && (
         <div className="relative">
           {loading && <LoadingState label="Atualizando indicadores" overlay />}
