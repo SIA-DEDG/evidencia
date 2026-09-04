@@ -44,6 +44,8 @@ Ao importar o repositório na Vercel, use:
 
 A pasta `api/` é detectada automaticamente pela Vercel como Functions. Não é necessário alterar a URL usada pelo frontend.
 
+O arquivo `vercel.json` mantém a Function do dashboard com duração máxima de 60 segundos. Depois de cadastrar ou alterar `SUPABASE_URL`, faça um novo deploy para aplicar a variável ao ambiente publicado.
+
 ## 4. Validação
 
 Depois do deploy, abra:

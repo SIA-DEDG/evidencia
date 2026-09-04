@@ -1,4 +1,3 @@
-import type { IncomingMessage, ServerResponse } from 'node:http'
 import pg from 'pg'
 import type { DashboardDataset, DashboardKind } from '../src/types/dashboard'
 import { DashboardService } from '../server/dashboardService'
@@ -16,31 +15,30 @@ const cache = new Map<string, CacheEntry>()
 const pending = new Map<string, Promise<DashboardDataset>>()
 let pool: pg.Pool | undefined
 
-function json(response: ServerResponse, status: number, body: unknown) {
-  response.statusCode = status
-  response.setHeader('Content-Type', 'application/json; charset=utf-8')
-  response.setHeader('Cache-Control', 'no-store')
-  response.end(JSON.stringify(body))
+function json(status: number, body: unknown, headers?: HeadersInit) {
+  return Response.json(body, {
+    status,
+    headers: {
+      'Cache-Control': 'no-store',
+      ...headers,
+    },
+  })
 }
 
-export default async function handler(request: IncomingMessage, response: ServerResponse) {
+async function handleDashboard(request: Request) {
   if (request.method !== 'GET') {
-    response.setHeader('Allow', 'GET')
-    json(response, 405, { error: 'Método não permitido.' })
-    return
+    return json(405, { error: 'Método não permitido.' }, { Allow: 'GET' })
   }
 
   const connectionString = process.env.SUPABASE_URL
   if (!connectionString) {
-    json(response, 503, { error: 'SUPABASE_URL não foi configurada no servidor.' })
-    return
+    return json(503, { error: 'SUPABASE_URL não foi configurada no servidor.' })
   }
 
-  const url = new URL(request.url ?? '/', 'http://localhost')
+  const url = new URL(request.url)
   const kind = url.searchParams.get('kind') as DashboardKind | null
   if (!kind || !dashboardKinds.has(kind)) {
-    json(response, 400, { error: 'Painel inválido.' })
-    return
+    return json(400, { error: 'Painel inválido.' })
   }
 
   pool ??= new pg.Pool({
@@ -54,10 +52,7 @@ export default async function handler(request: IncomingMessage, response: Server
   url.searchParams.sort()
   const cacheKey = url.searchParams.toString()
   const cached = cache.get(cacheKey)
-  if (cached && cached.expiresAt > Date.now()) {
-    json(response, 200, cached.value)
-    return
-  }
+  if (cached && cached.expiresAt > Date.now()) return json(200, cached.value)
   if (cached) cache.delete(cacheKey)
 
   let dashboardRequest = pending.get(cacheKey)
@@ -78,9 +73,13 @@ export default async function handler(request: IncomingMessage, response: Server
   }
 
   try {
-    json(response, 200, await dashboardRequest)
+    return json(200, await dashboardRequest)
   } catch (error: unknown) {
     console.error('Falha ao montar o dashboard:', error)
-    json(response, 500, { error: 'Falha ao consultar o banco.' })
+    return json(500, { error: 'Falha ao consultar o banco.' })
   }
+}
+
+export default {
+  fetch: handleDashboard,
 }

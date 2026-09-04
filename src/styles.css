@@ -54,6 +54,10 @@
   .update-strip span:first-child { @apply flex items-center gap-2; }
   .page-shell { @apply mx-auto w-full max-w-[1440px] px-4 pb-6 pt-5 sm:px-6; }
   .purpose-card { @apply min-h-[256px] rounded-xl p-4 shadow-card; background: linear-gradient(112deg, #0755aa 0%, #0d5caf 42%, #b7ccec 108%); }
+  .development-notice { @apply mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm; }
+  .development-notice svg { @apply mt-0.5 text-amber-600; }
+  .development-notice h2 { @apply text-sm font-semibold; }
+  .development-notice p { @apply mt-1 text-xs leading-relaxed text-amber-900; }
   .about-study-grid { @apply grid max-w-[1200px] gap-[30px] lg:grid-cols-3; }
   .about-study-grid-two { @apply max-w-[800px] lg:grid-cols-2; }
   .study-card { @apply flex min-h-[531px] flex-col rounded-[10px] bg-gradient-to-br from-[#e1edfa] to-white p-4 shadow-card dark:from-slate-800 dark:to-slate-900; }

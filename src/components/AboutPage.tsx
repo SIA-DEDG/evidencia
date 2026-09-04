@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ExternalLink } from 'lucide-react'
+import { Construction, ExternalLink } from 'lucide-react'
 
 export function AboutPage() {
   const studiesRef = useRef<HTMLDivElement>(null)
@@ -48,6 +48,14 @@ export function AboutPage() {
           <span className="before:mr-2 before:text-blue-300 before:content-['•']">Séries históricas conforme a disponibilidade de cada pesquisa</span>
         </div>
       </section>
+
+      <aside aria-labelledby="development-notice-title" className="development-notice">
+        <Construction aria-hidden="true" className="shrink-0" size={20} />
+        <div>
+          <h2 id="development-notice-title">Painel em desenvolvimento</h2>
+          <p>Esta é uma versão em evolução. Novos dados e funcionalidades serão adicionados, e elementos visuais e fluxos de navegação poderão mudar.</p>
+        </div>
+      </aside>
 
       <section className="mt-5">
         <h2 className="text-[24px] font-semibold leading-6 text-brand-700 dark:text-blue-200">Os dois índices</h2>
