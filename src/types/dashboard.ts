@@ -26,6 +26,7 @@ export interface RankingItem {
   position: number
   name: string
   value: number
+  wasNull?: boolean
 }
 
 export interface RankingHistoryItem {
@@ -36,6 +37,28 @@ export interface RankingHistoryItem {
   regionalTotal?: number
 }
 
+export type HighlightDirection = 'up' | 'down' | 'stable'
+
+export interface HighlightItem {
+  id: string
+  title: string
+  pillarId?: string
+  pillarTitle?: string
+  direction: HighlightDirection
+  change: number
+  currentPosition: number
+  previousPosition?: number
+  topTier?: 3 | 5 | 10
+  topStatus?: 'entered' | 'remained'
+  year: number
+}
+
+export interface HighlightGroup {
+  id: string
+  label: string
+  items: HighlightItem[]
+}
+
 export interface DetailRow {
   id: string
   level: 'Grupo' | 'Pilar' | 'Dimensão' | 'Indicador'
@@ -44,8 +67,13 @@ export interface DetailRow {
   nationalScore?: string
   regionalRank?: string
   regionalScore?: string
+  comparisonNationalRank?: string
+  comparisonNationalScore?: string
+  comparisonRegionalRank?: string
+  comparisonRegionalScore?: string
   year?: string
   description?: string
+  unit?: string
   source?: string
   children?: DetailRow[]
 }
@@ -78,7 +106,9 @@ export interface DashboardDataset {
   }
   nationalRanking: RankingItem[]
   regionalRanking: RankingItem[]
+  stateRanking: RankingItem[]
   history: RankingHistoryItem[]
   comparisonHistory: RankingHistoryItem[]
+  highlights: HighlightGroup[]
   details: DetailRow[]
 }

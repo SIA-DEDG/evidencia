@@ -20,7 +20,7 @@ function RankingCard({ title, metric, ranking, decimals }: { title: string; metr
           <span className="text-[10px] text-muted dark:text-slate-400">nota {first.value.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}</span>
         </div>
       )}
-      <div className="mt-[10px] grid grid-cols-2 gap-x-4 gap-y-[6px]">
+      <div className="mt-[10px] grid grid-flow-col grid-cols-2 grid-rows-2 gap-x-4 gap-y-[6px]">
         {remaining.map((item) => (
           <div className="flex items-baseline gap-1" key={item.name}>
             <strong className="text-xs leading-none text-brand-700 dark:text-blue-200">{item.position}º {item.name}</strong>

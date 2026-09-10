@@ -1,6 +1,6 @@
 # EvidencIA Inovação
 
-Dashboard responsivo implementado em React, TypeScript, Tailwind CSS e Chart.js a partir do arquivo Figma do projeto SIA/DEDG.
+Dashboard responsivo implementado em React, TypeScript, Tailwind CSS e Recharts (SVG vetorial) a partir do arquivo Figma do projeto SIA/DEDG.
 
 ## Executar
 

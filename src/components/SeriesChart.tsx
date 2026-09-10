@@ -1,26 +1,66 @@
 import {
-  CategoryScale,
-  Chart as ChartJS,
-  Filler,
+  CartesianGrid,
   Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Title,
+  Line,
+  LineChart,
+  ResponsiveContainer,
   Tooltip,
-} from 'chart.js'
-import { Line } from 'react-chartjs-2'
+  XAxis,
+  YAxis,
+  type TooltipContentProps,
+} from 'recharts'
 import type { DashboardDataset, DashboardKind } from '../types/dashboard'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+interface SeriesDatum {
+  year: number
+  primary: number | null
+  comparison: number | null
+  regional: number | null
+  comparisonRegional: number | null
+  nationalAverage: number | null
+}
 
-export function SeriesChart({ chart, hasComparison, kind, source }: { chart: DashboardDataset['chart']; hasComparison: boolean; kind: DashboardKind; source: string }) {
-  const isIbid = kind === 'ibid'
-  const period = chart.years.length === 1 ? String(chart.years[0]) : `${chart.years[0]}–${chart.years.at(-1)}`
-  const pointRadius = chart.years.length === 1 ? 4 : 0
+function SeriesTooltip({ active, label, payload }: TooltipContentProps) {
+  if (!active || !payload.length) return null
 
   return (
-    <section className={isIbid ? 'series-chart series-chart-ibid min-w-0' : 'series-chart series-chart-clp min-w-0'}>
+    <div className="chart-tooltip">
+      <strong>{label}</strong>
+      {payload.map((entry) => (
+        <p key={String(entry.dataKey)}>
+          <span style={{ backgroundColor: entry.color }} />
+          {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString('pt-BR') : '—'}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+export function SeriesChart({ chart, hasComparison, kind, metricLabel, source }: { chart: DashboardDataset['chart']; hasComparison: boolean; kind: DashboardKind; metricLabel: string; source: string }) {
+  const isIbid = kind === 'ibid'
+  const isMunicipal = kind === 'clp-municipios'
+  const period = chart.years.length === 1 ? String(chart.years[0]) : `${chart.years[0]}–${chart.years.at(-1)}`
+  const showDots = chart.years.length === 1
+  const accent = isMunicipal ? '#4d2f8a' : '#08325e'
+  const comparisonAccent = isMunicipal ? '#a78bdb' : '#8db2ff'
+  const nationalAccent = isMunicipal ? '#7450bd' : '#7c3aed'
+  const data: SeriesDatum[] = chart.years.map((year, index) => ({
+    year,
+    primary: chart.primary[index] ?? null,
+    comparison: chart.comparison[index] ?? null,
+    regional: chart.regional[index] ?? null,
+    comparisonRegional: chart.comparisonRegional[index] ?? null,
+    nationalAverage: chart.nationalAverage[index] ?? null,
+  }))
+  const commonLineProps = {
+    dot: showDots ? { r: 4 } : false,
+    activeDot: { r: 4 },
+    strokeWidth: 3,
+    type: 'monotone' as const,
+  }
+
+  return (
+    <section className="series-chart min-w-0">
       <h2 className="section-title">Série Histórica ({period})</h2>
       {isIbid ? (
         <p className="section-description">Nota Geral (IBID) é um indicador sintético que varia de 0 a 1 e agrega indicadores de naturezas e escalas distintas.</p>
@@ -28,35 +68,24 @@ export function SeriesChart({ chart, hasComparison, kind, source }: { chart: Das
         <p className="section-description">A Nota Geral - CLP é obtida por normalização e ponderação de indicadores que variam de 0 a 100.</p>
       )}
       <div className="chart-canvas min-w-0">
-        <Line
-          data={{
-            labels: chart.years,
-            datasets: [
-              { label: chart.primaryLabel, data: chart.primary, borderColor: '#08325e', backgroundColor: 'rgba(8,50,94,.1)', borderWidth: 3, pointRadius, tension: 0.42 },
-              ...(hasComparison ? [{ label: chart.comparisonLabel, data: chart.comparison, borderColor: '#8db2ff', backgroundColor: 'rgba(141,178,255,.12)', borderWidth: 3, pointRadius, tension: 0.42 }] : []),
-              { label: chart.regionalLabel, data: chart.regional, borderColor: '#6e7781', borderDash: [4, 4], borderWidth: 2, pointRadius, tension: 0.42 },
-              ...(hasComparison && chart.comparisonRegional.some((value) => value !== null)
-                ? [{ label: chart.comparisonRegionalLabel, data: chart.comparisonRegional, borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,.1)', borderDash: [4, 4], borderWidth: 2, pointRadius, tension: 0.42 }]
-                : []),
-              { label: 'Média do Brasil', data: chart.nationalAverage, borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,.1)', borderDash: [7, 4], borderWidth: 2, pointRadius, tension: 0.42 },
-            ],
-          }}
-          options={{
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { intersect: false, mode: 'index' },
-            plugins: {
-              legend: { position: 'bottom', labels: { boxWidth: 24, boxHeight: 2, color: '#4c6379', usePointStyle: true, pointStyle: 'line' } },
-              tooltip: { backgroundColor: '#08325e', padding: 12, cornerRadius: 8 },
-            },
-            scales: {
-              x: { grid: { display: false }, ticks: { color: '#6d8295' }, border: { color: '#bfd0e0' } },
-              y: { min: 0, max: chart.yMax, grid: { color: 'rgba(191,208,224,.62)' }, ticks: { color: '#6d8295' }, border: { display: false } },
-            },
-          }}
-        />
+        <ResponsiveContainer height="100%" width="100%">
+          <LineChart accessibilityLayer data={data} margin={{ bottom: 0, left: 0, right: 0, top: 8 }}>
+            <CartesianGrid stroke="rgba(191,208,224,.62)" vertical={false} />
+            <XAxis axisLine={{ stroke: '#bfbfbf' }} dataKey="year" tick={{ fill: '#54555a', fontSize: 12 }} tickMargin={10} tickLine={false} />
+            <YAxis axisLine={false} domain={[0, chart.yMax]} width={34} tick={{ fill: '#54555a', fontSize: 12 }} tickLine={false} />
+            <Tooltip content={SeriesTooltip} cursor={{ stroke: '#bfd0e0', strokeDasharray: '3 3' }} />
+            <Legend iconSize={17} iconType="plainline" wrapperStyle={{ color: '#404040', fontSize: 12, paddingTop: 20 }} />
+            <Line {...commonLineProps} dataKey="primary" name={chart.primaryLabel} stroke={accent} />
+            {hasComparison && <Line {...commonLineProps} dataKey="comparison" name={chart.comparisonLabel} stroke={comparisonAccent} />}
+            <Line {...commonLineProps} dataKey="regional" name={chart.regionalLabel} stroke="#6e7781" strokeDasharray="4 4" strokeWidth={2} />
+            {hasComparison && chart.comparisonRegional.some((value) => value !== null) && (
+              <Line {...commonLineProps} dataKey="comparisonRegional" name={chart.comparisonRegionalLabel} stroke="#d97706" strokeDasharray="4 4" strokeWidth={2} />
+            )}
+            <Line {...commonLineProps} dataKey="nationalAverage" name="Média do Brasil" stroke={nationalAccent} strokeDasharray="7 4" strokeWidth={2} />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
-      <p className="source-line">Fonte: {source}</p>
+      <p className="source-line">Fonte: {source} · Descrição: {metricLabel}</p>
     </section>
   )
 }

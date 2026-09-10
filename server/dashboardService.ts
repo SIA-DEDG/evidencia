@@ -4,6 +4,8 @@ import type {
   DashboardKind,
   DetailRow,
   FilterDefinition,
+  HighlightGroup,
+  HighlightItem,
   RankingHistoryItem,
   RankingItem,
   SelectOption,
@@ -30,8 +32,10 @@ interface ResultRow extends TerritoryRow {
 interface DetailResultRow {
   componente_id?: string
   id: string
+  ano_referencia?: number
   nota: number | null
   posicao: number | null
+  delta_posicao?: number | null
 }
 
 interface ComponentRow {
@@ -137,6 +141,185 @@ function scopedRanking(rows: ResultRow[]): RankingItem[] {
     .map((row, index) => ({ position: index + 1, name: row.sigla ?? row.nome, value: row.nota! }))
 }
 
+function buildStateRanking(states: TerritoryRow[], selectedResults: ResultRow[]): RankingItem[] {
+  const resultByTerritory = new Map(selectedResults.map((row) => [row.id, row]))
+
+  return states
+    .map((state) => {
+      const result = resultByTerritory.get(state.id)
+      const wasNull = result?.nota === null || result?.nota === undefined
+
+      return {
+        name: state.sigla ?? state.nome,
+        sortName: state.nome,
+        value: wasNull ? 0 : result.nota!,
+        position: result?.posicao ?? null,
+        wasNull,
+      }
+    })
+    .sort((a, b) => {
+      // A ordem do gráfico vem da posição oficial salva no banco.
+      // Isso preserva o desempate adotado pela fonte mesmo quando as notas são iguais.
+      const positionOrder = (a.position ?? Number.MAX_SAFE_INTEGER)
+        - (b.position ?? Number.MAX_SAFE_INTEGER)
+
+      if (positionOrder !== 0) return positionOrder
+
+      // Fallback apenas para registros sem posição oficial ou inconsistências de origem.
+      return a.sortName.localeCompare(b.sortName, 'pt-BR', { sensitivity: 'base' })
+    })
+    .map(({ name, value, position, wasNull }, index) => ({
+      position: position ?? index + 1,
+      name,
+      value,
+      wasNull,
+    }))
+}
+
+function buildMunicipalStateRanking(
+  states: TerritoryRow[],
+  municipalities: TerritoryRow[],
+  selectedMunicipalResults: ResultRow[],
+): RankingItem[] {
+  const stateByMunicipality = new Map(
+    municipalities.flatMap((municipality) => municipality.parent_id
+      ? [[municipality.id, municipality.parent_id] as const]
+      : []),
+  )
+  const valuesByState = new Map<string, number[]>()
+
+  for (const result of selectedMunicipalResults) {
+    if (result.nota === null) continue
+    const stateId = stateByMunicipality.get(result.id)
+    if (!stateId) continue
+    const values = valuesByState.get(stateId) ?? []
+    values.push(result.nota)
+    valuesByState.set(stateId, values)
+  }
+
+  return states
+    .map((state) => {
+      const values = valuesByState.get(state.id) ?? []
+      return {
+        name: state.sigla ?? state.nome,
+        sortName: state.nome,
+        value: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0,
+        wasNull: values.length === 0,
+      }
+    })
+    .sort((a, b) => b.value - a.value || a.sortName.localeCompare(b.sortName, 'pt-BR'))
+    .map(({ name, value, wasNull }, index) => ({ position: index + 1, name, value, wasNull }))
+}
+
+const highlightGroupLabels: Record<string, string> = {
+  GERAL: 'Nota geral',
+  GRUPO: 'Grupos',
+  PILAR: 'Pilares',
+  DIMENSAO: 'Dimensões',
+  INDICADOR: 'Indicadores',
+}
+
+function topTier(position: number): 3 | 5 | 10 | undefined {
+  if (position <= 3) return 3
+  if (position <= 5) return 5
+  if (position <= 10) return 10
+  return undefined
+}
+
+function buildHighlights(
+  components: ComponentRow[],
+  results: DetailResultRow[],
+  selectedYear: number,
+  kind: DashboardKind,
+): HighlightGroup[] {
+  const allowedTypes = new Set(
+    kind === 'ibid'
+      ? ['GERAL', 'DIMENSAO', 'INDICADOR']
+      : ['GERAL', 'PILAR', 'INDICADOR'],
+  )
+  const resultsByComponent = new Map<string, DetailResultRow[]>()
+  const componentById = new Map(components.map((component) => [component.id, component]))
+
+  function pillarFor(component: ComponentRow) {
+    let current: ComponentRow | undefined = component
+    const visited = new Set<string>()
+
+    while (current && !visited.has(current.id)) {
+      if (current.tipo === 'PILAR') return current
+      visited.add(current.id)
+      current = current.parent_id ? componentById.get(current.parent_id) : undefined
+    }
+
+    return undefined
+  }
+
+  for (const result of results) {
+    if (!result.componente_id || !result.ano_referencia) continue
+    const componentResults = resultsByComponent.get(result.componente_id) ?? []
+    componentResults.push(result)
+    resultsByComponent.set(result.componente_id, componentResults)
+  }
+
+  const itemsByType = new Map<string, HighlightItem[]>()
+
+  for (const component of components) {
+    if (!allowedTypes.has(component.tipo)) continue
+    const componentResults = (resultsByComponent.get(component.id) ?? [])
+      .filter((result) => result.posicao !== null && result.posicao !== undefined)
+      .sort((a, b) => (a.ano_referencia ?? 0) - (b.ano_referencia ?? 0))
+    const current = componentResults
+      .filter((result) => (result.ano_referencia ?? 0) <= selectedYear)
+      .at(-1)
+    if (!current?.posicao) continue
+
+    const change = current.delta_posicao ?? 0
+    const previousPosition = current.delta_posicao === null || current.delta_posicao === undefined
+      ? undefined
+      : current.posicao + current.delta_posicao
+    const currentTier = topTier(current.posicao)
+    const hasLargeVariation = Math.abs(change) > 3
+
+    if (!hasLargeVariation && !currentTier) continue
+
+    const previousTier = previousPosition ? topTier(previousPosition) : undefined
+    const pillar = pillarFor(component)
+    const item: HighlightItem = {
+      id: component.id,
+      title: component.tipo === 'GERAL'
+        ? kind === 'ibid' ? 'Nota Geral IBID' : 'Nota Geral CLP'
+        : component.nome,
+      pillarId: pillar?.id,
+      pillarTitle: pillar?.nome,
+      direction: change > 0 ? 'up' : change < 0 ? 'down' : 'stable',
+      change,
+      currentPosition: current.posicao,
+      previousPosition,
+      topTier: currentTier,
+      topStatus: currentTier
+        ? !previousTier || previousTier > currentTier
+          ? 'entered'
+          : 'remained'
+        : undefined,
+      year: selectedYear,
+    }
+
+    const typeItems = itemsByType.get(component.tipo) ?? []
+    typeItems.push(item)
+    itemsByType.set(component.tipo, typeItems)
+  }
+
+  return Object.entries(highlightGroupLabels).flatMap(([type, label]) => {
+    const items = itemsByType.get(type)
+    if (!items?.length) return []
+
+    return [{
+      id: type.toLowerCase(),
+      label,
+      items: items.sort((a, b) => Math.abs(b.change) - Math.abs(a.change) || a.currentPosition - b.currentPosition || a.title.localeCompare(b.title, 'pt-BR')),
+    }]
+  })
+}
+
 function historyFor(territory: TerritoryRow | undefined, results: ResultRow[], entities: TerritoryRow[]): RankingHistoryItem[] {
   if (!territory) return []
   const years = [...new Set(results.map((row) => row.ano_referencia))].sort((a, b) => a - b)
@@ -207,6 +390,9 @@ function buildDetails(
   detailResults: DetailResultRow[],
   primary: TerritoryRow,
   scopeTerritoryId: string | undefined,
+  comparison: TerritoryRow | undefined,
+  comparisonScopeTerritoryId: string | undefined,
+  selectedMetricId: string,
   kind: DashboardKind,
   selectedYear: number,
   entities: TerritoryRow[],
@@ -230,13 +416,22 @@ function buildDetails(
     resultByComponent.set(result.componente_id, values)
   }
   const peerIds = new Set(entities.filter((row) => row.parent_id === scopeTerritoryId).map((row) => row.id))
+  const comparisonPeerIds = new Set(
+    entities.filter((row) => row.parent_id === comparisonScopeTerritoryId).map((row) => row.id),
+  )
 
   function descend(component: ComponentRow, path: number[]): DetailRow {
     const results = resultByComponent.get(component.id) ?? []
     const primaryResult = results.find((row) => row.id === primary.id)
+    const comparisonResult = comparison ? results.find((row) => row.id === comparison.id) : undefined
     const peerResults = results.filter((row) => peerIds.has(row.id))
+    const comparisonPeerResults = results.filter((row) => comparisonPeerIds.has(row.id))
     const officialRegion = kind === 'ibid' ? results.find((row) => row.id === scopeTerritoryId) : undefined
+    const comparisonOfficialRegion = kind === 'ibid'
+      ? results.find((row) => row.id === comparisonScopeTerritoryId)
+      : undefined
     const regionalRank = valueRank(peerResults, primary.id)
+    const comparisonRegionalRank = comparison ? valueRank(comparisonPeerResults, comparison.id) : undefined
     const children = byParent.get(component.id) ?? []
     const level = (typeLabels[component.tipo] ?? 'Indicador') as DetailRow['level']
     return {
@@ -247,8 +442,15 @@ function buildDetails(
       nationalScore: scoreText(kind, primaryResult?.nota),
       regionalRank: regionalRank ? `${regionalRank}º` : '—',
       regionalScore: scoreText(kind, officialRegion?.nota ?? average(peerResults)),
+      comparisonNationalRank: comparisonResult?.posicao ? `${comparisonResult.posicao}º` : undefined,
+      comparisonNationalScore: comparison ? scoreText(kind, comparisonResult?.nota) : undefined,
+      comparisonRegionalRank: comparisonRegionalRank ? `${comparisonRegionalRank}º` : undefined,
+      comparisonRegionalScore: comparison
+        ? scoreText(kind, comparisonOfficialRegion?.nota ?? average(comparisonPeerResults))
+        : undefined,
       year: String(selectedYear),
       description: component.descricao ?? undefined,
+      unit: component.unidade_medida ?? undefined,
       source: component.fonte ?? undefined,
       children: children.map((child, index) => descend(child, [...path, index + 1])),
     }
@@ -256,6 +458,25 @@ function buildDetails(
 
   const general = components.find((component) => component.tipo === 'GERAL')
   const roots = general ? byParent.get(general.id) ?? [] : components.filter((component) => !component.parent_id)
+  const pathByComponent = new Map<string, number[]>()
+
+  function indexPaths(items: ComponentRow[], parentPath: number[] = []) {
+    items.forEach((item, index) => {
+      const path = [...parentPath, index + 1]
+      pathByComponent.set(item.id, path)
+      indexPaths(byParent.get(item.id) ?? [], path)
+    })
+  }
+
+  indexPaths(roots)
+
+  if (general?.id !== selectedMetricId) {
+    const selectedMetric = components.find((component) => component.id === selectedMetricId)
+    if (selectedMetric) {
+      return [descend(selectedMetric, pathByComponent.get(selectedMetric.id) ?? [1])]
+    }
+  }
+
   return roots.map((root, index) => descend(root, [index + 1]))
 }
 
@@ -332,7 +553,15 @@ export class DashboardService {
         join territorio t on t.id = rr.territorio_id
         where rr.edicao_id = $1 and rr.componente_id = $2
           and t.tipo = any($3::varchar[])
-      `, [edition.id, metric.id, kind === 'ibid' ? [config.entityType, 'REGIAO'] : [config.entityType]])
+      `, [
+        edition.id,
+        metric.id,
+        kind === 'ibid'
+          ? [config.entityType, 'REGIAO']
+          : kind === 'clp-municipios'
+            ? [config.entityType, 'UF']
+            : [config.entityType],
+      ])
       const allResults = allResultsQuery.rows.map((row) => ({ ...row, nota: numberValue(row.nota) }))
       const entityResults = allResults.filter((row) => row.tipo === config.entityType)
       const years = [...new Set(entityResults.map((row) => row.ano_referencia))].sort((a, b) => a - b)
@@ -407,6 +636,7 @@ export class DashboardService {
       const structureId = structureResult.rows[0]?.id
       let components: ComponentRow[] = []
       let details: DetailRow[] = []
+      let highlights: HighlightGroup[] = []
       if (structureId) {
         const componentResult = await client.query<ComponentRow>(`
           select c.id, c.codigo, c.tipo, ce.nome, ec.parent_componente_id as parent_id,
@@ -423,7 +653,14 @@ export class DashboardService {
         const componentIds = components.map((component) => component.id)
         const detailTerritoryIds = new Set(peerIds)
         detailTerritoryIds.add(primary.id)
+        if (comparison) detailTerritoryIds.add(comparison.id)
+        if (comparisonScopeTerritory) {
+          allTerritories
+            .filter((row) => row.tipo === config.entityType && row.parent_id === comparisonScopeTerritory.id)
+            .forEach((row) => detailTerritoryIds.add(row.id))
+        }
         if (kind === 'ibid' && scopeTerritory?.id) detailTerritoryIds.add(scopeTerritory.id)
+        if (kind === 'ibid' && comparisonScopeTerritory?.id) detailTerritoryIds.add(comparisonScopeTerritory.id)
         const detailResult = await client.query<DetailResultRow>(`
           select rr.componente_id, rr.territorio_id as id,
             rr.nota_normalizada::float8 as nota, rr.posicao
@@ -433,7 +670,28 @@ export class DashboardService {
             and rr.territorio_id = any($4::uuid[])
         `, [edition.id, componentIds, selectedYear, [...detailTerritoryIds]])
         const detailRows = detailResult.rows.map((row) => ({ ...row, nota: numberValue(row.nota) }))
-        details = buildDetails(components, detailRows, primary, scopeTerritory?.id, kind, selectedYear, allTerritories)
+        details = buildDetails(
+          components,
+          detailRows,
+          primary,
+          scopeTerritory?.id,
+          comparison,
+          comparisonScopeTerritory?.id,
+          metric.id,
+          kind,
+          selectedYear,
+          allTerritories,
+        )
+
+        const highlightResult = await client.query<DetailResultRow>(`
+          select rr.componente_id, rr.territorio_id as id, rr.ano_referencia,
+            rr.nota_normalizada::float8 as nota, rr.posicao, rr.delta_posicao
+          from resultado_ranking rr
+          where rr.edicao_id = $1 and rr.componente_id = any($2::uuid[])
+            and rr.ano_referencia <= $3 and rr.territorio_id = $4
+          order by rr.ano_referencia
+        `, [edition.id, componentIds, selectedYear, primary.id])
+        highlights = buildHighlights(components, highlightResult.rows, selectedYear, kind)
       }
 
       const stateOptions = availableStates.map((state) => kind === 'clp-municipios'
@@ -462,6 +720,15 @@ export class DashboardService {
             { id: 'year', label: 'Ano', value: String(selectedYear), options: years.slice().reverse().map((year) => ({ label: String(year), value: String(year) })) },
             { id: 'metric', label: 'Métrica', value: metric.codigo, options: metrics.map((item) => ({ label: titleForMetric(item, kind), value: item.codigo })) },
           ]
+
+      const selectedStateResults = allResults.filter(
+        (row) => row.tipo === 'UF' && row.ano_referencia === selectedYear,
+      )
+      const stateRanking = kind === 'clp-municipios'
+        ? buildMunicipalStateRanking(states, municipalities, selectedEntities)
+        : selectedStateResults.some((row) => row.nota !== null)
+          ? buildStateRanking(states, selectedStateResults)
+          : buildStateRanking(states, selectedEntities)
 
       return {
         kind,
@@ -493,8 +760,10 @@ export class DashboardService {
         },
         nationalRanking: ranking(selectedEntities),
         regionalRanking: scopedRanking(selectedPeers),
+        stateRanking,
         history: historyFor(primary, entityResults, allTerritories),
         comparisonHistory: historyFor(comparison, entityResults, allTerritories),
+        highlights,
         details,
       }
     } finally {
