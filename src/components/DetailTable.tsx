@@ -32,6 +32,19 @@ function cellValue(value?: string) {
   return value?.trim() ? value : '—'
 }
 
+function LevelBadges({ row }: { row: DetailRow }) {
+  return (
+    <span className="level-badge-stack">
+      <span className="level-badge">{row.level}</span>
+      {row.updateYear && (
+        <span className="level-badge level-badge-year" title={`Dados atualizados até ${row.updateYear}`}>
+          <span className="sr-only">Atualizado até </span>{row.updateYear}
+        </span>
+      )}
+    </span>
+  )
+}
+
 export function DetailTable({
   comparisonLabel,
   comparisonRegionalLabel,
@@ -95,7 +108,7 @@ export function DetailTable({
                 <span className="detail-chevron" aria-hidden="true">
                   {hasChildren ? (isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />) : null}
                 </span>
-                <span className="level-badge">{row.level}</span>
+                <LevelBadges row={row} />
                 <span className="detail-row-title">{row.title}</span>
               </button>
             </td>
@@ -154,7 +167,7 @@ export function DetailTable({
                     {hasChildren ? (isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />) : null}
                   </span>
                   <span className="detail-mobile-title-group">
-                    <span className="level-badge">{row.level}</span>
+                    <LevelBadges row={row} />
                     <span className="detail-mobile-row-title">{row.title}</span>
                   </span>
                 </button>

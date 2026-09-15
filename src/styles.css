@@ -53,7 +53,7 @@
   .update-strip { @apply flex min-h-[38px] flex-wrap items-center justify-between gap-2 bg-[#e1edfa] px-4 py-[10px] text-[12.5px] leading-[18px] text-black sm:px-6 dark:bg-slate-800 dark:text-slate-300; }
   .update-strip span:first-child { @apply flex items-center gap-2; }
   .update-strip svg { @apply shrink-0 text-brand-500; }
-  .page-shell { @apply mx-auto w-full max-w-[1440px] px-4 pb-6 pt-5 sm:px-6; }
+  .page-shell { @apply w-full px-4 pb-6 pt-5 sm:px-6; }
   .purpose-card { @apply min-h-[256px] rounded-xl p-4 shadow-card; background: linear-gradient(112deg, #0755aa 0%, #0d5caf 42%, #b7ccec 108%); }
   .development-notice { @apply mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm; }
   .development-notice svg { @apply mt-0.5 text-amber-600; }
@@ -106,32 +106,33 @@
   .chart-tooltip p { @apply flex items-center gap-1.5 py-0.5; }
   .chart-tooltip p span { @apply size-2 shrink-0 rounded-full; }
   .dashboard-results-panel { @apply mt-[30px] flex min-w-0 flex-col gap-5 rounded-[10px] bg-[#fdfeff] p-4 dark:bg-slate-900; }
-  .dashboard-visual-grid { @apply grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_440px] xl:gap-3.5; }
+  .dashboard-results-panel > .state-comparison-chart + .state-comparison-chart { @apply mt-4 border-t border-line pt-8 dark:border-slate-700; }
+  .dashboard-visual-grid { @apply grid min-w-0 items-start gap-8 xl:grid-cols-2 xl:gap-6; }
   .series-chart { @apply min-h-[390px]; }
   .chart-canvas { @apply mt-10 h-[279px]; }
-  .state-comparison-scroll { @apply mt-10 min-w-0 overflow-hidden; }
-  .state-comparison-canvas { height: 273px; }
+  .state-comparison-scroll-hint { @apply mt-4 hidden text-xs text-muted dark:text-slate-400; }
+  .state-comparison-scroll { @apply mt-10 min-w-0 overflow-x-auto overflow-y-hidden pb-2 outline-none focus-visible:ring-2 focus-visible:ring-[#2f8fd1]/40; overscroll-behavior-inline: contain; }
+  .state-comparison-canvas { min-width: 1080px; height: 273px; }
   .state-comparison-legend { @apply mt-5 flex items-center justify-center gap-1.5 text-xs text-[#404040]; }
   .state-comparison-legend span { @apply h-0 w-[17px] border-t-2; border-color: var(--dashboard-accent); }
   .state-comparison-source { @apply mt-5 pt-2.5; }
-  .ranking-history-grid { @apply grid gap-3 sm:grid-cols-2; }
-  .history-card { @apply min-w-0 min-h-[415px] overflow-hidden rounded-[10px] border border-[#e1edfa] bg-white pt-2.5 dark:border-slate-700 dark:bg-slate-900; }
-  .history-card > p, .history-card > h3 { @apply mx-2.5; }
-  .history-card > h3 { @apply mt-1.5; line-height: normal; }
-  .dashboard-clp-municipios .history-card { @apply border-[#f2effa]; }
-  .history-card > .eyebrow { @apply text-sm font-semibold normal-case tracking-normal text-[#012e66]; }
-  .dashboard-clp-municipios .history-card > .eyebrow { @apply text-[#4d2f8a]; }
-  .dashboard-clp-municipios .history-row strong { @apply text-[#4d2f8a]; }
-  .history-card > h3 { @apply font-bold text-black dark:text-white; }
-  .history-list { @apply mt-[6px]; }
-  .history-row { @apply flex min-h-[31px] items-center justify-between gap-2 px-2.5 py-1.5 text-[10px] text-[#4f5055]; }
-  .history-row:nth-child(odd) { @apply bg-[#f2f8ff] dark:bg-slate-800; }
-  .history-row:nth-child(even) { @apply bg-white dark:bg-slate-900; }
-  .history-rank { @apply whitespace-nowrap; }
-  .history-rank strong { @apply text-base font-bold leading-none text-brand-700; }
-  .history-rank b { @apply text-sm font-bold leading-none; }
-  .history-year { @apply shrink-0 text-[10px]; }
-  .history-empty-message { @apply mt-6 text-xs leading-relaxed text-muted; }
+  .dashboard-visual-charts { @apply flex min-w-0 flex-col gap-8; }
+  .chart-empty { @apply mt-10 flex h-[279px] items-center justify-center rounded-[10px] border border-line bg-canvas text-sm text-muted; }
+  .brazil-map { @apply flex min-w-0 flex-col; }
+  .brazil-map-canvas { @apply relative mt-6 min-w-0; }
+  .brazil-map-svg { @apply mx-auto block h-auto max-h-[720px] w-full max-w-[640px]; }
+  .brazil-map-empty { @apply mt-6 h-[480px]; }
+  .brazil-map-state { transition: fill .15s ease, opacity .15s ease; }
+  .brazil-map-state-interactive { @apply cursor-pointer outline-none; }
+  .brazil-map-state-interactive:hover, .brazil-map-state-interactive:focus-visible { opacity: .82; }
+  .brazil-map-state-selected:hover, .brazil-map-state-selected:focus-visible { opacity: 1; }
+  .brazil-map-tooltip { @apply pointer-events-none absolute z-10 whitespace-nowrap text-sm; transform: translate(-50%, calc(-100% - 14px)); }
+  .brazil-map-tooltip-name { @apply mb-1 block text-xs font-medium text-white/90; }
+  .brazil-map-tooltip strong { @apply mb-0 text-base leading-snug; }
+  .brazil-map-legend { @apply mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-[#404040]; }
+  .brazil-map-legend li { @apply flex items-center gap-2; }
+  .brazil-map-legend span { @apply size-4 shrink-0 rounded-[3px]; }
+  .brazil-map-legend .brazil-map-legend-outline { @apply border-[3px] bg-transparent; }
   .level-badge { @apply shrink-0 rounded-full border border-[#c8e3f8] bg-[#e8f4fd] px-2 py-1 text-[9px] font-semibold leading-none text-[#0755aa] dark:border-blue-800 dark:bg-blue-900/50 dark:text-blue-200; }
   .detail-table-heading { @apply flex flex-wrap items-end justify-between gap-3; }
   .detail-expand-control { @apply inline-flex h-9 items-center gap-2 rounded-lg border border-[#c9dcef] bg-white px-3 text-xs font-semibold text-[#0755aa] shadow-sm transition hover:border-[#75a9dc] hover:bg-[#eef6ff] dark:border-slate-700 dark:bg-slate-900 dark:text-blue-200 dark:hover:bg-slate-800; }
@@ -167,6 +168,8 @@
   .detail-row-depth-0 .detail-row-title { @apply font-medium text-[#404040] dark:text-blue-200; }
   .detail-text-cell { @apply break-words text-sm text-[#404040] dark:text-slate-400; }
   .detail-table .level-badge { @apply border-0 bg-[#0b4f91]/20 px-2 py-0 text-xs font-medium leading-5 text-brand-500; }
+  .level-badge-stack { @apply flex shrink-0 flex-col items-center gap-1; }
+  .level-badge.level-badge-year { @apply border border-current bg-transparent tabular-nums; }
   .detail-mobile-table-view { @apply mt-4 hidden; }
   .detail-mobile-territory { @apply mb-2 grid grid-cols-2 rounded-lg bg-[#dce7f1] p-1 dark:bg-slate-800; }
   .detail-mobile-territory button { @apply min-w-0 truncate rounded-md px-3 py-2 text-[11px] font-semibold text-muted transition-colors dark:text-slate-300; }
@@ -283,8 +286,7 @@
   .dashboard-clp-municipios .summary-card { border-color: var(--dashboard-accent-border); background-image: linear-gradient(to bottom right, var(--dashboard-accent-soft), white); }
   .dashboard-clp-municipios .level-badge { border-color: #d7cbed; background-color: #f1ecfa; color: var(--dashboard-accent); }
   .dashboard-clp-municipios .detail-row-striped,
-  .dashboard-clp-municipios .detail-mobile-table-row-striped,
-  .dashboard-clp-municipios .history-row:nth-child(odd) { background-color: var(--dashboard-accent-soft); }
+  .dashboard-clp-municipios .detail-mobile-table-row-striped { background-color: var(--dashboard-accent-soft); }
 }
 
 @media (min-width: 640px) {
@@ -293,7 +295,6 @@
   .highlight-micro-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .filter-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .filter-comparison-group { grid-column: span 2; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ranking-history-grid-single { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (min-width: 1024px) {
@@ -309,11 +310,7 @@
 
 @media (min-width: 1440px) {
   .page-shell { padding-left: 24px; padding-right: 24px; }
-  .summary-grid { grid-template-columns: repeat(5, 250px); justify-content: center; gap: 20px; }
-  .dashboard-visual-grid { grid-template-columns: minmax(0, 870fr) minmax(0, 476fr); gap: 14px; }
-  .ranking-history-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-  .ranking-history-grid-single { grid-template-columns: 231px; justify-content: center; }
-  .history-card { min-height: 415px; }
+  .summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; }
 }
 
 @media (max-width: 639px) {
@@ -325,6 +322,8 @@
   .header-logo { @apply max-w-full self-start; }
   .header-search { @apply max-w-full justify-start pr-0; }
   .summary-grid { grid-template-columns: 1fr; }
+  .state-comparison-scroll-hint { display: block; }
+  .state-comparison-scroll { margin-top: 16px; }
   .about-study-grid { @apply relative flex gap-4 overflow-x-auto pb-2 outline-none focus-visible:ring-2 focus-visible:ring-[#2f8fd1]/40; scroll-snap-type: x mandatory; scrollbar-width: none; }
   .about-study-grid::-webkit-scrollbar { display: none; }
   .about-study-grid > .study-card { @apply w-full shrink-0; scroll-snap-align: start; scroll-snap-stop: always; }

@@ -48,6 +48,7 @@ interface ComponentRow {
   descricao: string | null
   fonte: string | null
   unidade_medida: string | null
+  ultimo_ano_disponivel?: number | null
 }
 
 const kindConfig = {
@@ -150,6 +151,7 @@ function buildStateRanking(states: TerritoryRow[], selectedResults: ResultRow[])
       const wasNull = result?.nota === null || result?.nota === undefined
 
       return {
+        code: state.codigo,
         name: state.sigla ?? state.nome,
         sortName: state.nome,
         value: wasNull ? 0 : result.nota!,
@@ -168,12 +170,31 @@ function buildStateRanking(states: TerritoryRow[], selectedResults: ResultRow[])
       // Fallback apenas para registros sem posição oficial ou inconsistências de origem.
       return a.sortName.localeCompare(b.sortName, 'pt-BR', { sensitivity: 'base' })
     })
-    .map(({ name, value, position, wasNull }, index) => ({
+    .map(({ code, name, sortName, value, position, wasNull }, index) => ({
       position: position ?? index + 1,
       name,
+      code,
+      label: sortName,
       value,
       wasNull,
     }))
+}
+
+function buildMunicipalityRanking(municipalities: TerritoryRow[], selectedResults: ResultRow[]): RankingItem[] {
+  const resultByTerritory = new Map(selectedResults.map((row) => [row.id, row]))
+
+  return municipalities.map((municipality) => {
+    const result = resultByTerritory.get(municipality.id)
+    const wasNull = result?.nota === null || result?.nota === undefined
+    return {
+      position: result?.posicao ?? 0,
+      name: municipality.nome,
+      code: municipality.codigo,
+      label: municipality.nome,
+      value: wasNull ? 0 : result.nota!,
+      wasNull,
+    }
+  })
 }
 
 function buildMunicipalStateRanking(
@@ -201,6 +222,7 @@ function buildMunicipalStateRanking(
     .map((state) => {
       const values = valuesByState.get(state.id) ?? []
       return {
+        code: state.codigo,
         name: state.sigla ?? state.nome,
         sortName: state.nome,
         value: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0,
@@ -208,7 +230,7 @@ function buildMunicipalStateRanking(
       }
     })
     .sort((a, b) => b.value - a.value || a.sortName.localeCompare(b.sortName, 'pt-BR'))
-    .map(({ name, value, wasNull }, index) => ({ position: index + 1, name, value, wasNull }))
+    .map(({ code, name, sortName, value, wasNull }, index) => ({ position: index + 1, name, code, label: sortName, value, wasNull }))
 }
 
 const highlightGroupLabels: Record<string, string> = {
@@ -434,6 +456,10 @@ function buildDetails(
     const comparisonRegionalRank = comparison ? valueRank(comparisonPeerResults, comparison.id) : undefined
     const children = byParent.get(component.id) ?? []
     const level = (typeLabels[component.tipo] ?? 'Indicador') as DetailRow['level']
+    const childRows = children.map((child, index) => descend(child, [...path, index + 1]))
+    // Pilares e dimensões não têm ano próprio: vale o dado mais recente entre os componentes filhos.
+    const childYears = childRows.flatMap((row) => row.updateYear ? [Number(row.updateYear)] : [])
+    const updateYear = component.ultimo_ano_disponivel ?? (childYears.length ? Math.max(...childYears) : undefined)
     return {
       id: component.id,
       level,
@@ -449,10 +475,11 @@ function buildDetails(
         ? scoreText(kind, comparisonOfficialRegion?.nota ?? average(comparisonPeerResults))
         : undefined,
       year: String(selectedYear),
+      updateYear: updateYear ? String(updateYear) : undefined,
       description: component.descricao ?? undefined,
       unit: component.unidade_medida ?? undefined,
       source: component.fonte ?? undefined,
-      children: children.map((child, index) => descend(child, [...path, index + 1])),
+      children: childRows,
     }
   }
 
@@ -499,10 +526,13 @@ export class DashboardService {
         join arquivo_fonte af on af.id = ci.arquivo_fonte_id and af.edicao_id = e.id and af.ativo
         where p.codigo = $1
         group by e.id
-        order by e.ano desc limit 1
+        order by e.ano desc
       `, [config.research])
-      const edition = editionResult.rows[0]
-      if (!edition) throw new Error(`Não há carga concluída para ${config.research}.`)
+      // Uma pesquisa pode ter várias edições (ex.: uma planilha por ano do CLP Municípios).
+      const editions = editionResult.rows
+      const latestEdition = editions[0]
+      if (!latestEdition) throw new Error(`Não há carga concluída para ${config.research}.`)
+      const editionIds = editions.map((row) => row.id)
 
       const territoryResult = await client.query<TerritoryRow>(`
         select t.id, t.codigo, t.sigla, t.nome, t.tipo, t.parent_id
@@ -534,11 +564,12 @@ export class DashboardService {
           ce.descricao, ce.fonte, ce.unidade_medida
         from componente c
         join pesquisa p on p.id = c.pesquisa_id
-        join componente_edicao ce on ce.componente_id = c.id and ce.edicao_id = $2
+        join componente_edicao ce on ce.componente_id = c.id and ce.edicao_id = any($2::uuid[])
+        join edicao e on e.id = ce.edicao_id
         join carga_importacao ci on ci.id = ce.carga_importacao_id and ci.status = 'SUCESSO'
         where p.codigo = $1 and c.tipo = any($3::varchar[])
-        order by c.id, ci.concluida_em desc
-      `, [config.research, edition.id, config.metricTypes])
+        order by c.id, e.ano desc, ci.concluida_em desc
+      `, [config.research, editionIds, config.metricTypes])
       const metrics = metricResult.rows.sort((a, b) => {
         const order = config.metricTypes.indexOf(a.tipo as never) - config.metricTypes.indexOf(b.tipo as never)
         return order || (a.ordem_exibicao ?? 9999) - (b.ordem_exibicao ?? 9999) || a.nome.localeCompare(b.nome, 'pt-BR')
@@ -546,15 +577,15 @@ export class DashboardService {
       const metric = metrics.find((row) => row.codigo === values.metric) ?? metrics.find((row) => row.tipo === 'GERAL') ?? metrics[0]
       if (!metric) throw new Error('Nenhum indicador disponível para o painel.')
 
-      const allResultsQuery = await client.query<ResultRow>(`
-        select t.id, t.codigo, t.sigla, t.nome, t.tipo, t.parent_id,
+      const allResultsQuery = await client.query<ResultRow & { edicao_id: string }>(`
+        select t.id, t.codigo, t.sigla, t.nome, t.tipo, t.parent_id, rr.edicao_id,
           rr.ano_referencia, rr.nota_normalizada::float8 as nota, rr.posicao
         from resultado_ranking rr
         join territorio t on t.id = rr.territorio_id
-        where rr.edicao_id = $1 and rr.componente_id = $2
+        where rr.edicao_id = any($1::uuid[]) and rr.componente_id = $2
           and t.tipo = any($3::varchar[])
       `, [
-        edition.id,
+        editionIds,
         metric.id,
         kind === 'ibid'
           ? [config.entityType, 'REGIAO']
@@ -562,11 +593,29 @@ export class DashboardService {
             ? [config.entityType, 'UF']
             : [config.entityType],
       ])
-      const allResults = allResultsQuery.rows.map((row) => ({ ...row, nota: numberValue(row.nota) }))
+
+      // Cada ano usa uma única edição, para não misturar posições de publicações diferentes:
+      // a edição daquele próprio ano, ou, se não houver, a mais recente que traga o ano.
+      const editionYearById = new Map(editions.map((row) => [row.id, row.ano]))
+      const editionIdByYear = new Map<number, string>()
+      for (const row of allResultsQuery.rows) {
+        if (row.tipo !== config.entityType) continue
+        const chosen = editionIdByYear.get(row.ano_referencia)
+        const chosenYear = chosen ? editionYearById.get(chosen)! : undefined
+        const rowEditionYear = editionYearById.get(row.edicao_id)!
+        const better = chosenYear === undefined
+          || (rowEditionYear === row.ano_referencia && chosenYear !== row.ano_referencia)
+          || (chosenYear !== row.ano_referencia && rowEditionYear > chosenYear)
+        if (better) editionIdByYear.set(row.ano_referencia, row.edicao_id)
+      }
+      const allResults = allResultsQuery.rows
+        .filter((row) => editionIdByYear.get(row.ano_referencia) === row.edicao_id)
+        .map(({ edicao_id: _editionId, ...row }) => ({ ...row, nota: numberValue(row.nota) }))
       const entityResults = allResults.filter((row) => row.tipo === config.entityType)
       const years = [...new Set(entityResults.map((row) => row.ano_referencia))].sort((a, b) => a - b)
       const selectedYear = years.includes(Number(values.year)) ? Number(values.year) : years.at(-1)
       if (!selectedYear) throw new Error(`Não há resultados para ${metric.nome}.`)
+      const edition = editions.find((row) => row.id === editionIdByYear.get(selectedYear)) ?? latestEdition
 
       const selectedRegion = regions.find((row) => row.id === primary.parent_id)
         ?? regions.find((row) => row.codigo === values.region)
@@ -640,7 +689,12 @@ export class DashboardService {
       if (structureId) {
         const componentResult = await client.query<ComponentRow>(`
           select c.id, c.codigo, c.tipo, ce.nome, ec.parent_componente_id as parent_id,
-            ec.ordem_exibicao, ce.descricao, ce.fonte, ce.unidade_medida
+            ec.ordem_exibicao, ce.descricao, ce.fonte, ce.unidade_medida,
+            -- Algumas cargas da mesma edição não trazem o ano; usa o de outra carga quando houver.
+            coalesce(ce.ultimo_ano_disponivel, (
+              select max(other.ultimo_ano_disponivel) from componente_edicao other
+              where other.componente_id = c.id and other.edicao_id = e.edicao_id
+            )) as ultimo_ano_disponivel
           from estrutura_componente ec
           join componente c on c.id = ec.componente_id
           join estrutura e on e.id = ec.estrutura_id
@@ -733,7 +787,7 @@ export class DashboardService {
       return {
         kind,
         meta: {
-          updatedAt: new Date(edition.updated_at).toISOString(),
+          updatedAt: new Date(Math.max(...editions.map((row) => new Date(row.updated_at).getTime()))).toISOString(),
           dataPeriod: years.length === 1 ? String(years[0]) : `${years[0]}–${years.at(-1)}`,
           source: config.source,
         },
@@ -761,6 +815,7 @@ export class DashboardService {
         nationalRanking: ranking(selectedEntities),
         regionalRanking: scopedRanking(selectedPeers),
         stateRanking,
+        municipalityRanking: kind === 'clp-municipios' ? buildMunicipalityRanking(availableEntities, selectedEntities) : [],
         history: historyFor(primary, entityResults, allTerritories),
         comparisonHistory: historyFor(comparison, entityResults, allTerritories),
         highlights,

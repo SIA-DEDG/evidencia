@@ -27,6 +27,10 @@ export interface RankingItem {
   name: string
   value: number
   wasNull?: boolean
+  /** Código do território usado nos filtros (presente no ranking de estados). */
+  code?: string
+  /** Nome completo do território (presente no ranking de estados). */
+  label?: string
 }
 
 export interface RankingHistoryItem {
@@ -72,6 +76,8 @@ export interface DetailRow {
   comparisonRegionalRank?: string
   comparisonRegionalScore?: string
   year?: string
+  /** Último ano com dado disponível para o componente (pode ser anterior ao ano do ranking). */
+  updateYear?: string
   description?: string
   unit?: string
   source?: string
@@ -107,6 +113,8 @@ export interface DashboardDataset {
   nationalRanking: RankingItem[]
   regionalRanking: RankingItem[]
   stateRanking: RankingItem[]
+  /** Municípios do estado selecionado (apenas no painel de municípios); `position` é a posição nacional. */
+  municipalityRanking?: RankingItem[]
   history: RankingHistoryItem[]
   comparisonHistory: RankingHistoryItem[]
   highlights: HighlightGroup[]

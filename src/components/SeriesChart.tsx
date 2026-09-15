@@ -9,6 +9,7 @@ import {
   YAxis,
   type TooltipContentProps,
 } from 'recharts'
+import { getDashboardChartColors } from '../data/chartColors'
 import type { DashboardDataset, DashboardKind } from '../types/dashboard'
 
 interface SeriesDatum {
@@ -38,12 +39,9 @@ function SeriesTooltip({ active, label, payload }: TooltipContentProps) {
 
 export function SeriesChart({ chart, hasComparison, kind, metricLabel, source }: { chart: DashboardDataset['chart']; hasComparison: boolean; kind: DashboardKind; metricLabel: string; source: string }) {
   const isIbid = kind === 'ibid'
-  const isMunicipal = kind === 'clp-municipios'
   const period = chart.years.length === 1 ? String(chart.years[0]) : `${chart.years[0]}–${chart.years.at(-1)}`
   const showDots = chart.years.length === 1
-  const accent = isMunicipal ? '#4d2f8a' : '#08325e'
-  const comparisonAccent = isMunicipal ? '#a78bdb' : '#8db2ff'
-  const nationalAccent = isMunicipal ? '#7450bd' : '#7c3aed'
+  const colors = getDashboardChartColors(kind)
   const data: SeriesDatum[] = chart.years.map((year, index) => ({
     year,
     primary: chart.primary[index] ?? null,
@@ -75,13 +73,13 @@ export function SeriesChart({ chart, hasComparison, kind, metricLabel, source }:
             <YAxis axisLine={false} domain={[0, chart.yMax]} width={34} tick={{ fill: '#54555a', fontSize: 12 }} tickLine={false} />
             <Tooltip content={SeriesTooltip} cursor={{ stroke: '#bfd0e0', strokeDasharray: '3 3' }} />
             <Legend iconSize={17} iconType="plainline" wrapperStyle={{ color: '#404040', fontSize: 12, paddingTop: 20 }} />
-            <Line {...commonLineProps} dataKey="primary" name={chart.primaryLabel} stroke={accent} />
-            {hasComparison && <Line {...commonLineProps} dataKey="comparison" name={chart.comparisonLabel} stroke={comparisonAccent} />}
-            <Line {...commonLineProps} dataKey="regional" name={chart.regionalLabel} stroke="#6e7781" strokeDasharray="4 4" strokeWidth={2} />
+            <Line {...commonLineProps} dataKey="primary" name={chart.primaryLabel} stroke={colors.primary} />
+            {hasComparison && <Line {...commonLineProps} dataKey="comparison" name={chart.comparisonLabel} stroke={colors.comparison} />}
+            <Line {...commonLineProps} dataKey="regional" name={chart.regionalLabel} stroke={colors.regional} strokeDasharray="4 4" strokeWidth={2} />
             {hasComparison && chart.comparisonRegional.some((value) => value !== null) && (
               <Line {...commonLineProps} dataKey="comparisonRegional" name={chart.comparisonRegionalLabel} stroke="#d97706" strokeDasharray="4 4" strokeWidth={2} />
             )}
-            <Line {...commonLineProps} dataKey="nationalAverage" name="Média do Brasil" stroke={nationalAccent} strokeDasharray="7 4" strokeWidth={2} />
+            <Line {...commonLineProps} dataKey="nationalAverage" name="Média do Brasil" stroke={colors.national} strokeDasharray="7 4" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       </div>
