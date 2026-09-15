@@ -168,7 +168,9 @@ export function Highlights({ groups, kind, primaryName }: HighlightsProps) {
 
   function toggleAllPillars() {
     if (allPillarsExpanded) {
+      // Compactar tudo também recolhe a lista, como "Ver menos destaques".
       setExpandedPillars(new Set())
+      setExpanded(false)
       return
     }
 
