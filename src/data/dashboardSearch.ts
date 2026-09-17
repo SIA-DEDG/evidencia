@@ -16,7 +16,7 @@ export function normalizeSearchText(value: string) {
     .trim()
 }
 
-function editDistance(a: string, b: string) {
+export function editDistance(a: string, b: string) {
   if (a === b) return 0
   if (!a.length) return b.length
   if (!b.length) return a.length
@@ -35,7 +35,7 @@ function editDistance(a: string, b: string) {
   return previous[b.length]
 }
 
-function tokenSimilarity(a: string, b: string) {
+export function tokenSimilarity(a: string, b: string) {
   if (a === b) return 1
   if (a.length < 4 || b.length < 4) return 0
   if (a.startsWith(b) || b.startsWith(a)) return 0.92

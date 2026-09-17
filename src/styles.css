@@ -112,9 +112,14 @@
   .pillar-chart > .source-line { @apply mt-auto; }
   .pillar-chart-canvas { @apply my-5 h-[400px] min-w-0; }
   .insight-level-toolbar { @apply mt-[30px] flex flex-wrap items-center gap-3 text-sm font-medium text-[#404040]; }
-  .insight-search { @apply ml-auto flex h-10 w-full cursor-text items-center gap-2 rounded-[10px] border border-[#e6e6e7] bg-white px-3 text-[#404040] transition focus-within:border-[#034ea2] focus-within:ring-1 focus-within:ring-[#034ea2] sm:w-[280px] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300; }
+  .insight-search-root { @apply relative ml-auto w-full sm:w-[280px]; }
+  .insight-search { @apply flex h-10 w-full cursor-text items-center gap-2 rounded-[10px] border border-[#e6e6e7] bg-white px-3 text-[#404040] transition focus-within:border-[#034ea2] focus-within:ring-1 focus-within:ring-[#034ea2] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300; }
   .insight-search svg { @apply shrink-0; }
   .insight-search input { @apply min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-normal text-[#262626] outline-none placeholder:text-[#666] dark:text-slate-100; }
+  .insight-search-results { @apply absolute right-0 top-full z-[60] m-0 mt-1.5 max-h-[320px] w-full list-none overflow-y-auto rounded-lg border border-[#dbe5f0] bg-[#fdfeff] p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900; }
+  .insight-search-result { @apply flex cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-[13px] font-normal leading-snug text-[#1e3a5f] dark:text-slate-100; }
+  .insight-search-result-active { @apply bg-[#eef6ff] dark:bg-slate-800; }
+  .insight-search-result small { @apply shrink-0 rounded bg-[#fff4e0] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#9a5b00]; }
   .insight-rows-scroll { @apply my-5 min-w-0 overflow-y-auto overscroll-contain; }
   .insight-rows-scroll > .pillar-chart-canvas { @apply my-0; }
   .pillar-heatmap-scroll { @apply mt-5 max-h-[640px] min-w-0 overflow-auto rounded-[10px] outline-none focus-visible:ring-2 focus-visible:ring-[#2f8fd1]/40; }

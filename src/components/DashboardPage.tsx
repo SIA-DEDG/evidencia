@@ -1,10 +1,11 @@
-import { Building2, MapPinned, Search } from 'lucide-react'
+import { Building2, MapPinned } from 'lucide-react'
 import { useState } from 'react'
 import type { DashboardDataset, InsightGroup } from '../types/dashboard'
 import { BrazilMap } from './BrazilMap'
 import { DetailTable } from './DetailTable'
 import { Filters } from './Filters'
 import { Highlights } from './Highlights'
+import { InsightSearch } from './InsightSearch'
 import { MunicipalityMap } from './MunicipalityMap'
 import { canShowPositionChange, InsightGapChart, InsightPositionChangeChart, InsightPositionHeatmap, InsightProfileChart, levelPlural, type InsightChartProps } from './InsightCharts'
 import { PositionChart } from './PositionChart'
@@ -194,16 +195,12 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
                 </div>
               </>
             )}
-            <label className="insight-search">
-              <Search aria-hidden="true" size={16} />
-              <input
-                aria-label={`Buscar ${activeInsightGroup.level.toLowerCase()} no perfil e em forças e fraquezas`}
-                onChange={(event) => setInsightQuery(event.target.value)}
-                placeholder={`Buscar ${activeInsightGroup.level.toLowerCase()}…`}
-                type="search"
-                value={insightQuery}
-              />
-            </label>
+            <InsightSearch
+              level={activeInsightGroup.level.toLowerCase()}
+              names={[...new Set(activeInsightGroup.items.map((item) => item.name))]}
+              onChange={setInsightQuery}
+              value={insightQuery}
+            />
           </div>
           <div className="dashboard-panel-row">
             <div className="dashboard-results-panel">
