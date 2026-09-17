@@ -106,6 +106,37 @@
   .chart-tooltip p { @apply flex items-center gap-1.5 py-0.5; }
   .chart-tooltip p span { @apply size-2 shrink-0 rounded-full; }
   .dashboard-results-panel { @apply mt-[30px] flex min-w-0 flex-col gap-5 rounded-[10px] bg-[#fdfeff] p-4 dark:bg-slate-900; }
+  .dashboard-panel-row { @apply mt-[30px] grid min-w-0 gap-[30px] xl:grid-cols-2; }
+  .dashboard-panel-row > .dashboard-results-panel { @apply mt-0; }
+  .pillar-chart { @apply flex h-full min-w-0 flex-col; }
+  .pillar-chart > .source-line { @apply mt-auto; }
+  .pillar-chart-canvas { @apply my-5 h-[400px] min-w-0; }
+  .insight-level-toolbar { @apply mt-[30px] flex flex-wrap items-center gap-3 text-sm font-medium text-[#404040]; }
+  .insight-search { @apply ml-auto flex h-10 w-full cursor-text items-center gap-2 rounded-[10px] border border-[#e6e6e7] bg-white px-3 text-[#404040] transition focus-within:border-[#034ea2] focus-within:ring-1 focus-within:ring-[#034ea2] sm:w-[280px] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300; }
+  .insight-search svg { @apply shrink-0; }
+  .insight-search input { @apply min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-normal text-[#262626] outline-none placeholder:text-[#666] dark:text-slate-100; }
+  .insight-rows-scroll { @apply my-5 min-w-0 overflow-y-auto overscroll-contain; }
+  .insight-rows-scroll > .pillar-chart-canvas { @apply my-0; }
+  .pillar-heatmap-scroll { @apply mt-5 max-h-[640px] min-w-0 overflow-auto rounded-[10px] outline-none focus-visible:ring-2 focus-visible:ring-[#2f8fd1]/40; }
+  .pillar-heatmap thead th { @apply sticky top-0 z-[1] bg-[#fdfeff]; }
+  .pillar-heatmap { @apply w-full min-w-[720px] border-separate text-center text-xs; border-spacing: 2px; }
+  .pillar-heatmap thead th { @apply px-2 py-1.5 font-semibold text-[#404040]; }
+  .pillar-heatmap thead th:first-child, .pillar-heatmap tbody th { @apply text-left; }
+  .pillar-heatmap tbody th { @apply min-w-[180px] max-w-[320px] pr-4 font-medium leading-snug text-[#262626]; }
+  .pillar-heatmap td { @apply min-w-[48px] rounded px-2 py-2 font-semibold tabular-nums; }
+  .pillar-heatmap-empty { @apply bg-[#f3f4f6] text-[#9ca3af]; }
+  .pillar-heatmap-legend { @apply mt-4 flex items-center justify-end gap-2 text-xs text-[#54555a]; }
+  .pillar-heatmap-gradient { @apply h-2.5 w-40 rounded-full; }
+  .position-change-header { @apply flex flex-wrap items-center justify-between gap-x-6 gap-y-3; }
+  .position-change-controls { @apply flex flex-wrap items-center gap-x-6 gap-y-3; }
+  .position-change-years { @apply flex items-center gap-2 text-sm font-medium text-[#404040]; }
+  .position-change-select.field-select { @apply h-9 w-[88px] rounded-lg py-1.5 pl-3 pr-8; background-position: right 10px center; background-size: 12px 12px; }
+  .position-change-legend { @apply flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#404040]; }
+  .position-change-legend li { @apply flex items-center gap-1.5; }
+  .position-change-legend span { @apply size-2.5 shrink-0 rounded-full; }
+  .position-change-scroll { @apply my-3 max-h-[640px] min-w-0 overflow-y-auto; }
+  .pillar-heatmap-group-start > * { @apply border-t-[6px] border-t-transparent bg-clip-padding; }
+  .pillar-heatmap td.pillar-heatmap-territory { @apply min-w-[96px] max-w-[160px] truncate rounded-none bg-transparent pr-3 text-left text-xs font-semibold; }
   .dashboard-results-panel > .state-comparison-chart + .state-comparison-chart { @apply mt-4 border-t border-line pt-8 dark:border-slate-700; }
   .dashboard-visual-grid { @apply grid min-w-0 items-start gap-8 xl:grid-cols-2 xl:gap-6; }
   .series-chart { @apply min-h-[390px]; }

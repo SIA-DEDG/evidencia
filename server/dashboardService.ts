@@ -6,6 +6,8 @@ import type {
   FilterDefinition,
   HighlightGroup,
   HighlightItem,
+  ComponentInsight,
+  InsightGroup,
   RankingHistoryItem,
   RankingItem,
   SelectOption,
@@ -407,6 +409,116 @@ function makeSummary(
   ]
 }
 
+/** Diz se a edição candidata deve substituir a escolhida para um ano: a do próprio ano vence; senão, a mais recente. */
+function prefersEdition(candidateEditionYear: number, chosenEditionYear: number | undefined, year: number) {
+  if (chosenEditionYear === undefined) return true
+  if (candidateEditionYear === year) return chosenEditionYear !== year
+  return chosenEditionYear !== year && candidateEditionYear > chosenEditionYear
+}
+
+interface InsightResultRow {
+  componente_id: string
+  edicao_id: string
+  ano_referencia: number
+  media: number | null
+  total: number
+  nota: number | null
+  posicao: number | null
+  nota_comparacao: number | null
+  posicao_comparacao: number | null
+}
+
+const insightLevels = ['PILAR', 'DIMENSAO', 'INDICADOR'] as const
+type InsightLevel = typeof insightLevels[number]
+
+/**
+ * Componentes de cada nível relacionados à métrica, na ordem da estrutura:
+ * todos (nota geral), a própria métrica, os descendentes do nível ou o ancestral do nível.
+ * Os níveis saem ordenados pela profundidade na estrutura (ex.: no IBID o pilar vem antes da dimensão).
+ */
+function componentsForMetric(components: ComponentRow[], metricId: string) {
+  const byId = new Map(components.map((component) => [component.id, component]))
+  const byParent = new Map<string, ComponentRow[]>()
+  for (const component of components) {
+    const key = component.parent_id ?? ''
+    byParent.set(key, [...(byParent.get(key) ?? []), component])
+  }
+  const ordered: ComponentRow[] = []
+  const visit = (parentId: string) => {
+    const children = (byParent.get(parentId) ?? [])
+      .sort((a, b) => (a.ordem_exibicao ?? 9999) - (b.ordem_exibicao ?? 9999) || a.nome.localeCompare(b.nome, 'pt-BR'))
+    for (const child of children) {
+      ordered.push(child)
+      visit(child.id)
+    }
+  }
+  visit('')
+
+  const ancestorsOf = (component: ComponentRow) => {
+    const ancestors: ComponentRow[] = []
+    let current = component.parent_id ? byId.get(component.parent_id) : undefined
+    while (current && !ancestors.includes(current)) {
+      ancestors.push(current)
+      current = current.parent_id ? byId.get(current.parent_id) : undefined
+    }
+    return ancestors
+  }
+
+  const metric = byId.get(metricId)
+  const depthOf = (component: ComponentRow) => ancestorsOf(component).length
+
+  const levels = insightLevels.flatMap((level) => {
+    const ofLevel = ordered.filter((component) => component.tipo === level)
+    if (!ofLevel.length) return []
+    const depth = Math.min(...ofLevel.map(depthOf))
+    let items: ComponentRow[]
+    if (!metric || metric.tipo === 'GERAL') items = ofLevel
+    else if (metric.tipo === level) items = [metric]
+    else {
+      const descendants = ofLevel.filter((component) => ancestorsOf(component).some((ancestor) => ancestor.id === metric.id))
+      const ancestor = ancestorsOf(metric).find((component) => component.tipo === level)
+      items = descendants.length ? descendants : ancestor ? [ancestor] : []
+    }
+    return items.length ? [{ level, depth, items }] : []
+  })
+  return levels.sort((a, b) => a.depth - b.depth)
+}
+
+function buildInsightItems(
+  items: ComponentRow[],
+  rows: InsightResultRow[],
+  editionYearById: Map<string, number>,
+  years: number[],
+  selectedYear: number,
+): ComponentInsight[] {
+  const chosen = new Map<string, InsightResultRow>()
+  for (const row of rows) {
+    const key = `${row.componente_id}:${row.ano_referencia}`
+    const current = chosen.get(key)
+    const currentYear = current ? editionYearById.get(current.edicao_id) : undefined
+    if (prefersEdition(editionYearById.get(row.edicao_id)!, currentYear, row.ano_referencia)) chosen.set(key, row)
+  }
+
+  return items.flatMap((item) => {
+    const history = years.map((year) => {
+      const row = chosen.get(`${item.id}:${year}`)
+      return { year, position: row?.posicao ?? null, comparisonPosition: row?.posicao_comparacao ?? null, total: row?.total ?? 0 }
+    })
+    const current = chosen.get(`${item.id}:${selectedYear}`)
+    if (!current && history.every((point) => point.position === null && point.comparisonPosition === null)) return []
+    return [{
+      id: item.id,
+      name: item.nome,
+      score: numberValue(current?.nota),
+      comparisonScore: numberValue(current?.nota_comparacao),
+      nationalAverage: numberValue(current?.media),
+      position: current?.posicao ?? null,
+      total: current?.total ?? 0,
+      history,
+    }]
+  })
+}
+
 function buildDetails(
   components: ComponentRow[],
   detailResults: DetailResultRow[],
@@ -601,12 +713,10 @@ export class DashboardService {
       for (const row of allResultsQuery.rows) {
         if (row.tipo !== config.entityType) continue
         const chosen = editionIdByYear.get(row.ano_referencia)
-        const chosenYear = chosen ? editionYearById.get(chosen)! : undefined
-        const rowEditionYear = editionYearById.get(row.edicao_id)!
-        const better = chosenYear === undefined
-          || (rowEditionYear === row.ano_referencia && chosenYear !== row.ano_referencia)
-          || (chosenYear !== row.ano_referencia && rowEditionYear > chosenYear)
-        if (better) editionIdByYear.set(row.ano_referencia, row.edicao_id)
+        const chosenYear = chosen ? editionYearById.get(chosen) : undefined
+        if (prefersEdition(editionYearById.get(row.edicao_id)!, chosenYear, row.ano_referencia)) {
+          editionIdByYear.set(row.ano_referencia, row.edicao_id)
+        }
       }
       const allResults = allResultsQuery.rows
         .filter((row) => editionIdByYear.get(row.ano_referencia) === row.edicao_id)
@@ -686,6 +796,7 @@ export class DashboardService {
       let components: ComponentRow[] = []
       let details: DetailRow[] = []
       let highlights: HighlightGroup[] = []
+      let insightGroups: InsightGroup[] = []
       if (structureId) {
         const componentResult = await client.query<ComponentRow>(`
           select c.id, c.codigo, c.tipo, ce.nome, ec.parent_componente_id as parent_id,
@@ -746,6 +857,53 @@ export class DashboardService {
           order by rr.ano_referencia
         `, [edition.id, componentIds, selectedYear, primary.id])
         highlights = buildHighlights(components, highlightResult.rows, selectedYear, kind)
+
+        const insightLevelsForMetric = componentsForMetric(components, metric.id)
+        if (insightLevelsForMetric.length) {
+          // Agregado no banco: média nacional e total por componente/ano/edição, com nota e posição do principal e da comparação.
+          // Alguns anos (ex.: IBID antes de 2025) não têm posição oficial; nesses, a posição sai da ordem das notas.
+          const insightResult = await client.query<InsightResultRow>(`
+            with base as (
+              select rr.componente_id, rr.edicao_id, rr.ano_referencia, rr.territorio_id, rr.nota_normalizada, rr.posicao
+              from resultado_ranking rr
+              join territorio t on t.id = rr.territorio_id
+              where rr.edicao_id = any($1::uuid[]) and rr.componente_id = any($2::uuid[]) and t.tipo = $3
+            ), grouped as (
+              select componente_id, edicao_id, ano_referencia,
+                avg(nota_normalizada)::float8 as media,
+                count(nota_normalizada)::int as total,
+                max(nota_normalizada) filter (where territorio_id = $4) as nota,
+                max(posicao) filter (where territorio_id = $4) as posicao_oficial,
+                max(nota_normalizada) filter (where territorio_id = $5) as nota_comparacao,
+                max(posicao) filter (where territorio_id = $5) as posicao_comparacao_oficial
+              from base
+              group by componente_id, edicao_id, ano_referencia
+            )
+            select g.componente_id, g.edicao_id, g.ano_referencia, g.media, g.total, g.nota::float8 as nota, g.nota_comparacao::float8 as nota_comparacao,
+              coalesce(g.posicao_oficial, case when g.nota is not null then 1 + (
+                select count(*) from base b
+                where b.componente_id = g.componente_id and b.edicao_id = g.edicao_id
+                  and b.ano_referencia = g.ano_referencia and b.nota_normalizada > g.nota
+              ) end)::int as posicao,
+              coalesce(g.posicao_comparacao_oficial, case when g.nota_comparacao is not null then 1 + (
+                select count(*) from base b
+                where b.componente_id = g.componente_id and b.edicao_id = g.edicao_id
+                  and b.ano_referencia = g.ano_referencia and b.nota_normalizada > g.nota_comparacao
+              ) end)::int as posicao_comparacao
+            from grouped g
+          `, [
+            editionIds,
+            insightLevelsForMetric.flatMap((entry) => entry.items.map((item) => item.id)),
+            config.entityType,
+            primary.id,
+            comparison?.id ?? null,
+          ])
+          // Níveis sem nenhum dado (ex.: indicadores do IBID) ficam de fora.
+          insightGroups = insightLevelsForMetric.flatMap(({ level, items }) => {
+            const insights = buildInsightItems(items, insightResult.rows, editionYearById, years, selectedYear)
+            return insights.length ? [{ level: typeLabels[level] as InsightGroup['level'], items: insights }] : []
+          })
+        }
       }
 
       const stateOptions = availableStates.map((state) => kind === 'clp-municipios'
@@ -819,6 +977,7 @@ export class DashboardService {
         history: historyFor(primary, entityResults, allTerritories),
         comparisonHistory: historyFor(comparison, entityResults, allTerritories),
         highlights,
+        insightGroups,
         details,
       }
     } finally {

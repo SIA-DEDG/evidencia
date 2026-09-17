@@ -1,10 +1,12 @@
-import { Building2, MapPinned } from 'lucide-react'
-import type { DashboardDataset } from '../types/dashboard'
+import { Building2, MapPinned, Search } from 'lucide-react'
+import { useState } from 'react'
+import type { DashboardDataset, InsightGroup } from '../types/dashboard'
 import { BrazilMap } from './BrazilMap'
 import { DetailTable } from './DetailTable'
 import { Filters } from './Filters'
 import { Highlights } from './Highlights'
 import { MunicipalityMap } from './MunicipalityMap'
+import { canShowPositionChange, InsightGapChart, InsightPositionChangeChart, InsightPositionHeatmap, InsightProfileChart, levelPlural, type InsightChartProps } from './InsightCharts'
 import { PositionChart } from './PositionChart'
 import { SeriesChart } from './SeriesChart'
 import { StateComparisonChart, type ComparisonRankingItem } from './StateComparisonChart'
@@ -24,8 +26,9 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
   const metricLabel = data.summary[0]?.metric ?? 'Nota Geral'
   const selectedYear = data.filters.find((filter) => filter.id === 'year')?.value ?? ''
   const hasComparison = Boolean(data.filters.find((filter) => filter.id === 'comparison')?.value)
-  // Em municípios, o estado em destaque é o do filtro "Estado".
-  const primaryState = data.filters.find((filter) => filter.id === (municipal ? 'state' : 'primary'))?.value
+  const [insightLevel, setInsightLevel] = useState<InsightGroup['level']>('Pilar')
+  const [insightQuery, setInsightQuery] = useState('')
+  const primaryState = municipal ? undefined : data.filters.find((filter) => filter.id === 'primary')?.value
   const comparisonState = municipal ? undefined : data.filters.find((filter) => filter.id === 'comparison')?.value
   const hasComparisonRegion = hasComparison && data.chart.comparisonRegional.some((value) => value !== null)
   const primaryRegionalLabel = data.summary[2]?.title ?? (municipal ? 'Estado' : 'Região')
@@ -39,6 +42,22 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
     .filter((item) => !item.wasNull)
     .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, 'pt-BR'))
     .map((item, index) => ({ ...item, position: index + 1, detail: item.position ? `${item.position}º no Brasil` : undefined }))
+
+  const insightGroups = data.insightGroups ?? []
+  // Mantém o nível escolhido entre recargas quando ele continua disponível; senão usa o primeiro.
+  const activeInsightGroup = insightGroups.find((group) => group.level === insightLevel) ?? insightGroups[0]
+  const insightChartProps: InsightChartProps | undefined = activeInsightGroup && {
+    comparisonLabel,
+    decimals: data.kind === 'ibid' ? 3 : 2,
+    hasComparison,
+    items: activeInsightGroup.items,
+    kind: data.kind,
+    level: activeInsightGroup.level,
+    metricLabel,
+    primaryLabel,
+    source: data.meta.source,
+    year: selectedYear,
+  }
 
   // Clicar no mapa troca o território principal (estado ou município) e recarrega o painel com o novo filtro.
   function selectPrimary(code: string) {
@@ -125,17 +144,7 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
         </div>
       </div>
       <div className="dashboard-results-panel">
-        <StateComparisonChart
-          comparisonState={comparisonState}
-          decimals={data.kind === 'ibid' ? 3 : 2}
-          kind={data.kind}
-          metricLabel={metricLabel}
-          primaryState={primaryState}
-          ranking={data.stateRanking ?? []}
-          source={data.meta.source}
-          year={selectedYear}
-        />
-        {municipal && (
+        {municipal ? (
           <StateComparisonChart
             comparisonState={comparisonValue}
             decimals={2}
@@ -151,8 +160,69 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
             title={`Comparativo com os Municípios${stateName ? ` · ${stateName}` : ''}`}
             year={selectedYear}
           />
+        ) : (
+          <StateComparisonChart
+            comparisonState={comparisonState}
+            decimals={data.kind === 'ibid' ? 3 : 2}
+            kind={data.kind}
+            metricLabel={metricLabel}
+            primaryState={primaryState}
+            ranking={data.stateRanking ?? []}
+            source={data.meta.source}
+            year={selectedYear}
+          />
         )}
       </div>
+      {activeInsightGroup && insightChartProps && (
+        <>
+          <div className="insight-level-toolbar">
+            {insightGroups.length > 1 && (
+              <>
+                <span id="insight-level-label">Detalhar por</span>
+                <div aria-labelledby="insight-level-label" className="segment-control" role="group">
+                  {insightGroups.map((group) => (
+                    <button
+                      aria-pressed={group.level === activeInsightGroup.level}
+                      className={group.level === activeInsightGroup.level ? 'segment-active' : ''}
+                      key={group.level}
+                      onClick={() => setInsightLevel(group.level)}
+                      type="button"
+                    >
+                      {levelPlural[group.level]} ({group.items.length})
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <label className="insight-search">
+              <Search aria-hidden="true" size={16} />
+              <input
+                aria-label={`Buscar ${activeInsightGroup.level.toLowerCase()} no perfil e em forças e fraquezas`}
+                onChange={(event) => setInsightQuery(event.target.value)}
+                placeholder={`Buscar ${activeInsightGroup.level.toLowerCase()}…`}
+                type="search"
+                value={insightQuery}
+              />
+            </label>
+          </div>
+          <div className="dashboard-panel-row">
+            <div className="dashboard-results-panel">
+              <InsightProfileChart {...insightChartProps} searchQuery={insightQuery} />
+            </div>
+            <div className="dashboard-results-panel">
+              <InsightGapChart {...insightChartProps} searchQuery={insightQuery} />
+            </div>
+          </div>
+          {canShowPositionChange(insightChartProps) && (
+            <div className="dashboard-results-panel">
+              <InsightPositionChangeChart {...insightChartProps} />
+            </div>
+          )}
+          <div className="dashboard-results-panel">
+            <InsightPositionHeatmap {...insightChartProps} />
+          </div>
+        </>
+      )}
       <div className="dashboard-results-panel">
         <DetailTable
           comparisonLabel={comparisonLabel}

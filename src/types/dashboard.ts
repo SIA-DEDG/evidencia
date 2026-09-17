@@ -84,6 +84,33 @@ export interface DetailRow {
   children?: DetailRow[]
 }
 
+export interface InsightPositionPoint {
+  year: number
+  position: number | null
+  /** Posição do território de comparação (nulo sem comparação selecionada). */
+  comparisonPosition: number | null
+  /** Quantidade de territórios com nota no componente naquele ano. */
+  total: number
+}
+
+/** Pilar, dimensão ou indicador com as notas do ano selecionado e o histórico de posição. */
+export interface ComponentInsight {
+  id: string
+  name: string
+  /** Nota do território principal no ano selecionado. */
+  score: number | null
+  comparisonScore: number | null
+  nationalAverage: number | null
+  position: number | null
+  total: number
+  history: InsightPositionPoint[]
+}
+
+export interface InsightGroup {
+  level: 'Pilar' | 'Dimensão' | 'Indicador'
+  items: ComponentInsight[]
+}
+
 export interface DashboardDataset {
   kind: DashboardKind
   meta: {
@@ -118,5 +145,7 @@ export interface DashboardDataset {
   history: RankingHistoryItem[]
   comparisonHistory: RankingHistoryItem[]
   highlights: HighlightGroup[]
+  /** Pilares, dimensões e indicadores relacionados à métrica selecionada, agrupados por nível. */
+  insightGroups?: InsightGroup[]
   details: DetailRow[]
 }
