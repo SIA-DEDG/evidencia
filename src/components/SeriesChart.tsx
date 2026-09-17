@@ -37,10 +37,14 @@ function SeriesTooltip({ active, label, payload }: TooltipContentProps) {
   )
 }
 
+/** Bolinha preenchida com a cor da linha e contorno branco; o tracejado da linha não passa para o contorno. */
+function lineDot(color: string, r = 4) {
+  return { fill: color, r, stroke: '#ffffff', strokeDasharray: 'none', strokeWidth: 1.5 }
+}
+
 export function SeriesChart({ chart, hasComparison, kind, metricLabel, source }: { chart: DashboardDataset['chart']; hasComparison: boolean; kind: DashboardKind; metricLabel: string; source: string }) {
   const isIbid = kind === 'ibid'
   const period = chart.years.length === 1 ? String(chart.years[0]) : `${chart.years[0]}–${chart.years.at(-1)}`
-  const showDots = chart.years.length === 1
   const colors = getDashboardChartColors(kind)
   const data: SeriesDatum[] = chart.years.map((year, index) => ({
     year,
@@ -51,8 +55,6 @@ export function SeriesChart({ chart, hasComparison, kind, metricLabel, source }:
     nationalAverage: chart.nationalAverage[index] ?? null,
   }))
   const commonLineProps = {
-    dot: showDots ? { r: 4 } : false,
-    activeDot: { r: 4 },
     strokeWidth: 3,
     type: 'monotone' as const,
   }
@@ -73,13 +75,13 @@ export function SeriesChart({ chart, hasComparison, kind, metricLabel, source }:
             <YAxis axisLine={false} domain={[0, chart.yMax]} width={34} tick={{ fill: '#54555a', fontSize: 12 }} tickLine={false} />
             <Tooltip content={SeriesTooltip} cursor={{ stroke: '#bfd0e0', strokeDasharray: '3 3' }} />
             <Legend iconSize={17} iconType="plainline" wrapperStyle={{ color: '#404040', fontSize: 12, paddingTop: 20 }} />
-            <Line {...commonLineProps} dataKey="primary" name={chart.primaryLabel} stroke={colors.primary} />
-            {hasComparison && <Line {...commonLineProps} dataKey="comparison" name={chart.comparisonLabel} stroke={colors.comparison} />}
-            <Line {...commonLineProps} dataKey="regional" name={chart.regionalLabel} stroke={colors.regional} strokeDasharray="4 4" strokeWidth={2} />
+            <Line {...commonLineProps} activeDot={lineDot(colors.primary, 6)} dataKey="primary" dot={lineDot(colors.primary)} name={chart.primaryLabel} stroke={colors.primary} />
+            {hasComparison && <Line {...commonLineProps} activeDot={lineDot(colors.comparison, 6)} dataKey="comparison" dot={lineDot(colors.comparison)} name={chart.comparisonLabel} stroke={colors.comparison} />}
+            <Line {...commonLineProps} activeDot={lineDot(colors.regional, 5)} dataKey="regional" dot={lineDot(colors.regional, 3)} name={chart.regionalLabel} stroke={colors.regional} strokeDasharray="4 4" strokeWidth={2} />
             {hasComparison && chart.comparisonRegional.some((value) => value !== null) && (
-              <Line {...commonLineProps} dataKey="comparisonRegional" name={chart.comparisonRegionalLabel} stroke="#d97706" strokeDasharray="4 4" strokeWidth={2} />
+              <Line {...commonLineProps} activeDot={lineDot('#d97706', 5)} dataKey="comparisonRegional" dot={lineDot('#d97706', 3)} name={chart.comparisonRegionalLabel} stroke="#d97706" strokeDasharray="4 4" strokeWidth={2} />
             )}
-            <Line {...commonLineProps} dataKey="nationalAverage" name="Média do Brasil" stroke={colors.national} strokeDasharray="7 4" strokeWidth={2} />
+            <Line {...commonLineProps} activeDot={lineDot(colors.national, 5)} dataKey="nationalAverage" dot={lineDot(colors.national, 3)} name="Média do Brasil" stroke={colors.national} strokeDasharray="7 4" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       </div>

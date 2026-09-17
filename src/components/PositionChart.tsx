@@ -47,6 +47,11 @@ interface PositionChartProps {
   source: string
 }
 
+/** Bolinha preenchida com a cor da linha e contorno branco; o tracejado da linha não passa para o contorno. */
+function lineDot(color: string, r = 4) {
+  return { fill: color, r, stroke: '#ffffff', strokeDasharray: 'none', strokeWidth: 1.5 }
+}
+
 export function PositionChart({ comparison, comparisonLabel, hasComparison, kind, metricLabel, primary, primaryLabel, source }: PositionChartProps) {
   const colors = getDashboardChartColors(kind)
   const years = [...new Set([...primary, ...(hasComparison ? comparison : [])].map((item) => item.year))].sort((a, b) => a - b)
@@ -60,11 +65,8 @@ export function PositionChart({ comparison, comparisonLabel, hasComparison, kind
   }))
   const maxTotal = Math.max(1, ...data.map((item) => item.total ?? 0))
   const period = years.length === 0 ? '' : years.length === 1 ? String(years[0]) : `${years[0]}–${years.at(-1)}`
-  const showDots = years.length === 1
   const commonLineProps = {
     connectNulls: true,
-    dot: showDots ? { r: 4 } : false,
-    activeDot: { r: 4 },
     strokeWidth: 3,
     type: 'monotone' as const,
   }
@@ -93,8 +95,8 @@ export function PositionChart({ comparison, comparisonLabel, hasComparison, kind
               />
               <Tooltip content={PositionTooltip} cursor={{ stroke: '#bfd0e0', strokeDasharray: '3 3' }} />
               <Legend iconSize={17} iconType="plainline" wrapperStyle={{ color: '#404040', fontSize: 12, paddingTop: 20 }} />
-              <Line {...commonLineProps} dataKey="primary" name={primaryLabel} stroke={colors.primary} />
-              {hasComparison && <Line {...commonLineProps} dataKey="comparison" name={comparisonLabel} stroke={colors.comparison} />}
+              <Line {...commonLineProps} activeDot={lineDot(colors.primary, 6)} dataKey="primary" dot={lineDot(colors.primary)} name={primaryLabel} stroke={colors.primary} />
+              {hasComparison && <Line {...commonLineProps} activeDot={lineDot(colors.comparison, 6)} dataKey="comparison" dot={lineDot(colors.comparison)} name={comparisonLabel} stroke={colors.comparison} />}
             </LineChart>
           </ResponsiveContainer>
         </div>
