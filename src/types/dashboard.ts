@@ -157,5 +157,7 @@ export interface DashboardDataset {
 export interface ComparisonDataset {
   ibid: DashboardDataset
   clp: DashboardDataset
+  /** Par de pilares relacionados em exibição; ausente nas notas gerais. */
+  relation?: string
   meta: DashboardDataset['meta']
 }

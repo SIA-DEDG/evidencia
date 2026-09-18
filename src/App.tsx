@@ -5,6 +5,7 @@ import { DashboardPage } from './components/DashboardPage'
 import { HeaderIntegration, type PageId } from './components/HeaderIntegration'
 import { LoadingState } from './components/LoadingState'
 import { dashboardRepository } from './data/dashboardRepository'
+import { pillarRelation } from './data/studyRelations'
 import { detectDashboardKind, interpretDashboardSearch, normalizeSearchText } from './data/dashboardSearch'
 import type { ComparisonDataset, DashboardDataset } from './types/dashboard'
 
@@ -64,10 +65,13 @@ export default function App() {
     setError(null)
     try {
       const primary = filters.primary || undefined
+      const relation = pillarRelation(filters.metric)
+      const ibidMetric: Record<string, string> = relation ? { metric: relation.ibidMetric } : {}
+      const clpMetric: Record<string, string> = relation ? { metric: relation.clpMetric } : {}
       const seedFilters: Record<string, string> = primary ? { primary } : {}
       const [ibidSeed, clpSeed] = await Promise.all([
-        dashboardRepository.getDashboard('ibid', seedFilters),
-        dashboardRepository.getDashboard('clp-estados', seedFilters),
+        dashboardRepository.getDashboard('ibid', { ...seedFilters, ...ibidMetric }),
+        dashboardRepository.getDashboard('clp-estados', { ...seedFilters, ...clpMetric }),
       ])
       const ibidYears = new Set(ibidSeed.filters.find((item) => item.id === 'year')?.options.map((item) => item.value) ?? [])
       const commonYears = clpSeed.filters
@@ -80,8 +84,8 @@ export default function App() {
       const ibidSelectedYear = ibidSeed.filters.find((item) => item.id === 'year')?.value
       const clpSelectedYear = clpSeed.filters.find((item) => item.id === 'year')?.value
       const [ibid, clp] = await Promise.all([
-        year && ibidSelectedYear !== year ? dashboardRepository.getDashboard('ibid', synchronizedFilters) : Promise.resolve(ibidSeed),
-        year && clpSelectedYear !== year ? dashboardRepository.getDashboard('clp-estados', synchronizedFilters) : Promise.resolve(clpSeed),
+        year && ibidSelectedYear !== year ? dashboardRepository.getDashboard('ibid', { ...synchronizedFilters, ...ibidMetric }) : Promise.resolve(ibidSeed),
+        year && clpSelectedYear !== year ? dashboardRepository.getDashboard('clp-estados', { ...synchronizedFilters, ...clpMetric }) : Promise.resolve(clpSeed),
       ])
       if (requestId !== requestSequence.current) return
       const updatedAt = new Date(Math.max(new Date(ibid.meta.updatedAt).getTime(), new Date(clp.meta.updatedAt).getTime())).toISOString()
@@ -89,6 +93,7 @@ export default function App() {
       setComparison({
         ibid,
         clp,
+        relation: relation?.id,
         meta: {
           updatedAt,
           dataPeriod: years.length === 1 ? String(years[0]) : `${years[0]}–${years.at(-1)}`,

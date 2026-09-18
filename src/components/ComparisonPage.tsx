@@ -20,6 +20,7 @@ import {
 } from 'recharts'
 import { BrazilMap } from './BrazilMap'
 import { FilterDrawer } from './FilterDrawer'
+import { generalMetricValue, pillarRelation, pillarRelationLabel, pillarRelations, type PillarRelation } from '../data/studyRelations'
 import type { ComparisonDataset, DashboardDataset, DetailRow, RankingItem, SelectOption } from '../types/dashboard'
 
 interface ComparisonPageProps {
@@ -40,20 +41,19 @@ interface ComparisonDatum {
   total: number | null
 }
 
-interface ConceptDefinition {
+interface ConceptRow {
   id: string
-  title: string
-  terms: string[]
-}
-
-interface ConceptRow extends ConceptDefinition {
+  relation: PillarRelation
   ibid?: DetailRow
   clp?: DetailRow
 }
 
 interface ConceptChildRow {
   id: string
-  title: string
+  ibidTitle: string
+  clpTitle: string
+  note: string
+  source: string
   ibid?: DetailRow
   clp?: DetailRow
 }
@@ -62,14 +62,6 @@ const colors = {
   ibid: '#034ea2',
   clp: '#8db2ff',
 }
-
-const concepts: ConceptDefinition[] = [
-  { id: 'sustentabilidade', title: 'Sustentabilidade Ambiental', terms: ['sustentabilidade'] },
-  { id: 'capital-humano', title: 'Capital Humano', terms: ['capital humano'] },
-  { id: 'educacao', title: 'Educação', terms: ['educacao'] },
-  { id: 'maquina-publica', title: 'Eficiência da Máquina Pública', terms: ['maquina publica', 'gestao publica', 'instituicoes'] },
-  { id: 'infraestrutura', title: 'Infraestrutura', terms: ['infraestrutura'] },
-]
 
 function normalize(value: string) {
   return value
@@ -157,7 +149,7 @@ function ChartTooltip({ active, label, payload }: TooltipContentProps) {
   )
 }
 
-function StudySummaryCard({ data, label }: { data: DashboardDataset; label: 'IBID' | 'CLP' }) {
+function StudySummaryCard({ data, label, metricName }: { data: DashboardDataset; label: 'IBID' | 'CLP'; metricName: string }) {
   const selectedYear = Number(filter(data, 'year')?.value)
   const values = data.chart.years.flatMap((year, index) => {
     const value = data.chart.primary[index]
@@ -179,7 +171,7 @@ function StudySummaryCard({ data, label }: { data: DashboardDataset; label: 'IBI
     <article className="summary-card comparison-summary-card">
       <p className="eyebrow">Estudo</p>
       <h3 className="truncate text-base font-semibold text-brand-700">{label}</h3>
-      <p className="truncate text-xs text-muted">Nota Geral · {label}</p>
+      <p className="truncate text-xs text-muted">{metricName} · {label}</p>
       <div className="comparison-summary-stats">
         {stats.map((stat) => (
           <div key={stat.caption}>
@@ -196,11 +188,11 @@ function StudySummaryCard({ data, label }: { data: DashboardDataset; label: 'IBI
   )
 }
 
-function TopStatesCard({ data }: { data: DashboardDataset }) {
+function TopStatesCard({ data, metricName }: { data: DashboardDataset; metricName: string }) {
   const [first, ...remaining] = data.nationalRanking.slice(0, 5)
   return (
     <article className="summary-card ranking-summary comparison-top-card">
-      <p className="eyebrow truncate">Top 5 Brasil · Nota Geral CLP</p>
+      <p className="eyebrow truncate">Top 5 Brasil · {metricName} CLP</p>
       {first && (
         <div className="mt-[10px] flex items-baseline gap-1">
           <strong className="text-base leading-none text-brand-700">{first.position}º {first.name}</strong>
@@ -373,10 +365,11 @@ function rankNumber(value?: string) {
 
 function PillarDumbbell({ data, stateName }: { data: ComparisonDataset; stateName: string }) {
   const total = Math.max(27, ...(data.ibid.stateRanking ?? []).map((item) => item.position))
-  const rows = concepts.map((concept) => ({
-    ...concept,
-    ibid: rankNumber(findConcept(data.ibid.details, concept)?.nationalRank),
-    clp: rankNumber(findConcept(data.clp.details, concept)?.nationalRank),
+  const rows = conceptRows(data).map((concept) => ({
+    id: concept.id,
+    title: pairTitle(concept.relation.ibidPillar, concept.relation.clpPillar),
+    ibid: rankNumber(concept.ibid?.nationalRank),
+    clp: rankNumber(concept.clp?.nationalRank),
   }))
   const offset = (position: number) => ((position - 1) / (total - 1)) * 100
   const ticks = [...new Set([1, 5, 10, 15, 20, 25, total])].filter((value) => value <= total)
@@ -385,7 +378,7 @@ function PillarDumbbell({ data, stateName }: { data: ComparisonDataset; stateNam
     <section className="min-w-0">
       <h2 className="section-title">Posição por pilar nos dois estudos</h2>
       <p className="section-description">
-        Posição de {stateName} no ranking Brasil em cada conceito comum. Quanto mais longo o traço, mais os estudos discordam; mais à esquerda, melhor a colocação.
+        Posição de {stateName} no ranking Brasil em cada par de pilares relacionados (IBID × CLP). Quanto mais longo o traço, mais os estudos discordam; mais à esquerda, melhor a colocação.
       </p>
       <div className="comparison-dumbbell" role="list">
         {rows.map((row) => {
@@ -423,58 +416,76 @@ function PillarDumbbell({ data, stateName }: { data: ComparisonDataset; stateNam
   )
 }
 
-function findConcept(rows: DetailRow[], definition: ConceptDefinition) {
+function stripNumber(title: string) {
+  return title.replace(/^\d+(?:\.\d+)*\.?\s*/, '')
+}
+
+function findByName(rows: DetailRow[], name: string) {
+  const target = normalize(name)
   const queue = [...rows]
   while (queue.length) {
     const row = queue.shift()!
-    const title = normalize(row.title)
-    if (definition.terms.some((term) => title.includes(term))) return row
+    if (normalize(stripNumber(row.title)) === target) return row
     if (row.children) queue.push(...row.children)
   }
   return undefined
 }
 
+function pairTitle(ibid: string, clp: string) {
+  return normalize(ibid) === normalize(clp) ? ibid : `${ibid} × ${clp}`
+}
+
+/** Pares de pilares exibidos: todos nas notas gerais, ou só o par escolhido no filtro. */
+function conceptRows(data: ComparisonDataset): ConceptRow[] {
+  const selected = pillarRelation(data.relation)
+  return (selected ? [selected] : pillarRelations).map((relation) => ({
+    id: relation.id,
+    relation,
+    ibid: findByName(data.ibid.details, relation.ibidPillar),
+    clp: findByName(data.clp.details, relation.clpPillar),
+  }))
+}
+
+function childRows(concept: ConceptRow): ConceptChildRow[] {
+  return concept.relation.indicators.map((indicator) => ({
+    id: `${concept.id}-${normalize(indicator.clp)}`,
+    ibidTitle: indicator.ibid,
+    clpTitle: indicator.clp,
+    note: indicator.note,
+    source: indicator.source,
+    ibid: findByName(concept.ibid ? [concept.ibid] : [], indicator.ibid),
+    clp: findByName(concept.clp ? [concept.clp] : [], indicator.clp),
+  }))
+}
+
 function scoreCell(row?: DetailRow) {
   if (!row) return <span className="comparison-empty-cell">—</span>
+  const hasRank = Boolean(row.nationalRank && row.nationalRank !== '—')
+  const hasScore = Boolean(row.nationalScore && row.nationalScore !== '—')
+  if (!hasRank && !hasScore) return <span className="comparison-empty-cell">sem nota</span>
   return (
     <span className="comparison-table-value">
       <strong>{row.nationalRank || '—'}</strong>
-      <small>{row.nationalScore && row.nationalScore !== '—' ? `nota ${row.nationalScore}` : ''}</small>
+      <small>{hasScore ? `nota ${row.nationalScore}` : ''}</small>
     </span>
   )
 }
 
-function childRows(concept: ConceptRow) {
-  const rows: ConceptChildRow[] = []
-  const ibidChildren = concept.ibid?.children ?? []
-  const clpChildren = concept.clp?.children ?? []
-  const usedClp = new Set<string>()
-
-  for (const ibid of ibidChildren.slice(0, 4)) {
-    const ibidTitle = normalize(ibid.title).replace(/^\d+(?:\.\d+)*\s*/, '')
-    const clp = clpChildren.find((candidate) => {
-      const clpTitle = normalize(candidate.title).replace(/^\d+(?:\.\d+)*\s*/, '')
-      return !usedClp.has(candidate.id) && (clpTitle.includes(ibidTitle) || ibidTitle.includes(clpTitle))
-    })
-    if (clp) usedClp.add(clp.id)
-    rows.push({ id: `ibid-${ibid.id}`, title: ibid.title, ibid, clp })
-  }
-  for (const clp of clpChildren.filter((item) => !usedClp.has(item.id)).slice(0, Math.max(0, 4 - rows.length))) {
-    rows.push({ id: `clp-${clp.id}`, title: clp.title, clp })
-  }
-  return rows
+function PairName({ clp, ibid }: { clp: string; ibid: string }) {
+  if (normalize(ibid) === normalize(clp)) return <>{ibid}</>
+  return (
+    <span className="comparison-pair-name">
+      <span><b>IBID</b> {ibid}</span>
+      <span><b>CLP</b> {clp}</span>
+    </span>
+  )
 }
 
 function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateName: string }) {
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(['sustentabilidade']))
+  const rows = conceptRows(data)
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set([rows[0]?.id ?? '']))
   const [mobileStudy, setMobileStudy] = useState<'ibid' | 'clp'>('ibid')
   const [openDetails, setOpenDetails] = useState<Set<string>>(() => new Set())
-  const rows = concepts.map((concept) => ({
-    ...concept,
-    ibid: findConcept(data.ibid.details, concept),
-    clp: findConcept(data.clp.details, concept),
-  }))
-
   function toggle(id: string) {
     setExpanded((current) => {
       const next = new Set(current)
@@ -550,7 +561,7 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
           depth: 1,
           id: `${mobileStudy}-${child.id}`,
           row: child[mobileStudy],
-          title: child.title,
+          title: mobileStudy === 'ibid' ? child.ibidTitle : child.clpTitle,
           type: 'Indicador',
         }))}
       </Fragment>
@@ -562,7 +573,10 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
       <div className="detail-table-heading">
         <div>
           <h2 className="section-title">Tabela Detalhada · {stateName}</h2>
-          <p className="section-description">Pilar / Indicador</p>
+          <p className="section-description">
+            Pilares e indicadores que medem a mesma coisa nos dois estudos, relacionados por mesma fonte e mesma medida.
+            O IBID não publica nota por indicador, só por pilar.
+          </p>
         </div>
       </div>
       <div className="detail-table-shell comparison-detail-table-shell" role="region" aria-label={`Conceitos comuns de ${stateName}`} tabIndex={0}>
@@ -574,7 +588,7 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
             <col className="comparison-col-source" />
           </colgroup>
           <thead>
-            <tr><th className="detail-hierarchy-header">Conceito comum</th><th>IBID</th><th>CLP</th><th>Fonte</th></tr>
+            <tr><th className="detail-hierarchy-header">Pilar / indicador relacionado</th><th>IBID</th><th>CLP</th><th>Fonte</th></tr>
           </thead>
           <tbody>
             {rows.map((row, index) => {
@@ -610,7 +624,7 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
               {rows.map((row, index) => renderMobileRow({
                 id: row.id,
                 row: row[mobileStudy],
-                title: `${index + 1}. ${row.title}`,
+                title: `${index + 1}. ${mobileStudy === 'ibid' ? row.relation.ibidPillar : row.relation.clpPillar}`,
                 type: 'Pilar',
               }))}
             </tbody>
@@ -629,7 +643,7 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
   onToggle(): void
   row: ConceptRow
 }) {
-  const source = [row.ibid?.source, row.clp?.source].filter(Boolean).join(' · ') || '—'
+  const sources = [...new Set(row.relation.indicators.map((indicator) => indicator.source))].join(' · ')
   return (
     <>
       <tr className={`detail-row${index % 2 === 0 ? ' detail-row-striped' : ''}`}>
@@ -637,12 +651,12 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
           <button aria-expanded={canExpand ? isExpanded : undefined} className="detail-row-trigger" disabled={!canExpand} onClick={onToggle} type="button">
             <span className="detail-chevron" aria-hidden="true">{canExpand ? isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} /> : null}</span>
             <span className="level-badge">Pilar</span>
-            <span className="detail-row-title">{index + 1}. {row.title}</span>
+            <span className="detail-row-title">{index + 1}. <PairName clp={row.relation.clpPillar} ibid={row.relation.ibidPillar} /></span>
           </button>
         </td>
         <td>{scoreCell(row.ibid)}</td>
         <td>{scoreCell(row.clp)}</td>
-        <td className="detail-text-cell comparison-source-cell" title={source}>{source}</td>
+        <td className="detail-text-cell comparison-source-cell" title={sources}>{sources}</td>
       </tr>
       {isExpanded && childrenRows.map((child) => (
         <tr className="detail-row" key={child.id}>
@@ -650,12 +664,15 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
             <span className="detail-row-trigger">
               <span className="detail-chevron" />
               <span className="level-badge">Indicador</span>
-              <span className="detail-row-title">{child.title}</span>
+              <span className="detail-row-title">
+                <PairName clp={child.clpTitle} ibid={child.ibidTitle} />
+                <small className="comparison-pair-note">{child.note}</small>
+              </span>
             </span>
           </td>
           <td>{scoreCell(child.ibid)}</td>
           <td>{scoreCell(child.clp)}</td>
-          <td className="detail-text-cell comparison-source-cell" title={child.ibid?.source ?? child.clp?.source}>{child.ibid?.source ?? child.clp?.source ?? '—'}</td>
+          <td className="detail-text-cell comparison-source-cell" title={child.source}>{child.source}</td>
         </tr>
       ))}
     </>
@@ -680,6 +697,12 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
   const mapData = mapStudy === 'ibid' ? data.ibid : data.clp
   const ibidByState = useMemo(() => new Map((data.ibid.stateRanking ?? []).map((item) => [item.code, item])), [data.ibid])
   const clpByState = useMemo(() => new Map((data.clp.stateRanking ?? []).map((item) => [item.code, item])), [data.clp])
+  const relation = pillarRelation(data.relation)
+  const ibidMetricName = relation ? `Pilar ${relation.ibidPillar}` : 'Nota Geral'
+  const clpMetricName = relation ? `Pilar ${relation.clpPillar}` : 'Nota Geral'
+  const seriesSubject = relation
+    ? `das notas dos pilares ${relation.ibidPillar} (IBID) e ${relation.clpPillar} (CLP)`
+    : 'das notas gerais'
 
   function mapTooltipLines(item: RankingItem) {
     const line = (label: string, entry: RankingItem | undefined, decimals: number) =>
@@ -687,8 +710,12 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
     return [line('IBID', ibidByState.get(item.code), 3), line('CLP', clpByState.get(item.code), 2)]
   }
 
-  function updateFilter(id: 'primary' | 'year', value: string) {
-    onFiltersChange({ primary: id === 'primary' ? value : selectedState, year: id === 'year' ? value : selectedYear })
+  function updateFilter(id: 'primary' | 'year' | 'metric', value: string) {
+    onFiltersChange({
+      primary: id === 'primary' ? value : selectedState,
+      year: id === 'year' ? value : selectedYear,
+      metric: id === 'metric' ? value : data.relation ?? generalMetricValue,
+    })
   }
 
   const filterFields = (
@@ -707,8 +734,11 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
     </label>
     <label className="min-w-0">
       <span className="field-label">Métrica</span>
-      <select aria-readonly="true" className="field-select" disabled value="geral">
-        <option value="geral">Notas Gerais · IBID e CLP</option>
+      <select className="field-select" onChange={(event) => updateFilter('metric', event.target.value)} value={data.relation ?? generalMetricValue}>
+        <option value={generalMetricValue}>Notas Gerais · IBID e CLP</option>
+        <optgroup label="Pilares relacionados">
+          {pillarRelations.map((item) => <option key={item.id} value={item.id}>{pillarRelationLabel(item)}</option>)}
+        </optgroup>
       </select>
     </label>
     </>
@@ -728,7 +758,7 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
 
       <div className="dashboard-filter-intro">
         <h2>Painel comparativo dos estados</h2>
-        <p>Escolha um estado e um ano para comparar sua nota geral, a posição no ranking e os conceitos relacionados nos dois estudos.</p>
+        <p>Escolha um estado, um ano e a métrica: as notas gerais ou um par de pilares que medem a mesma coisa nos dois estudos.</p>
       </div>
 
       <section className="filter-panel mt-5" aria-label="Filtros do comparativo" ref={filterPanelRef}>
@@ -738,9 +768,9 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
       </section>
 
       <section className="summary-grid comparison-summary-grid" aria-label="Resumo comparativo">
-        <StudySummaryCard data={data.ibid} label="IBID" />
-        <StudySummaryCard data={data.clp} label="CLP" />
-        <TopStatesCard data={data.clp} />
+        <StudySummaryCard data={data.ibid} label="IBID" metricName={ibidMetricName} />
+        <StudySummaryCard data={data.clp} label="CLP" metricName={clpMetricName} />
+        <TopStatesCard data={data.clp} metricName={clpMetricName} />
       </section>
 
       <div className="dashboard-results-panel">
@@ -748,7 +778,7 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
           <div className="dashboard-visual-charts">
           <section className="series-chart min-w-0">
             <h2 className="section-title">Série Histórica {period ? `(${period})` : ''}</h2>
-            <p className="section-description">Evolução das notas gerais de {stateName}. IBID no eixo esquerdo (0–1) e CLP no eixo direito (0–100).</p>
+            <p className="section-description">Evolução {seriesSubject} de {stateName}. IBID no eixo esquerdo (0–1) e CLP no eixo direito (0–100).</p>
             <div className="chart-canvas min-w-0">
               <ResponsiveContainer height="100%" width="100%">
                 <LineChart accessibilityLayer data={chartData} margin={{ left: 0, right: 8, top: 8 }}>
@@ -815,7 +845,7 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
             <BrazilMap
               decimals={mapStudy === 'ibid' ? 3 : 2}
               kind={mapData.kind}
-              metricLabel="Nota Geral"
+              metricLabel={mapStudy === 'ibid' ? ibidMetricName : clpMetricName}
               onSelect={(code) => updateFilter('primary', code)}
               ranking={mapData.stateRanking ?? []}
               selectedCode={selectedState}

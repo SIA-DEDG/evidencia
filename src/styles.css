@@ -117,6 +117,9 @@
   .comparison-stat-caption { @apply mt-2.5 block truncate text-[11px] font-semibold leading-normal text-black; }
   .comparison-chart-grid { @apply grid min-w-0 grid-cols-1 gap-8 xl:grid-cols-2 xl:gap-10; }
   .comparison-scatter-canvas { @apply h-[440px] w-full; }
+  .comparison-pair-name { @apply inline-flex flex-col gap-0.5; }
+  .comparison-pair-name b { @apply mr-1 text-[10px] font-semibold uppercase tracking-wide text-muted; }
+  .comparison-pair-note { @apply mt-1 block whitespace-normal text-[11px] font-normal leading-snug text-muted; }
   .filter-drawer-trigger { @apply fixed left-0 z-40 flex h-14 w-16 -translate-x-full items-center justify-center rounded-r-full border border-l-0 border-[#e6e6e7] bg-white pr-1 text-brand-700 opacity-0 shadow-[0_4px_14px_rgba(3,78,162,.18)] transition duration-200 hover:bg-[#eef6ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 dark:border-slate-700 dark:bg-slate-900 dark:text-blue-200; top: calc(env(safe-area-inset-top, 0px) + var(--filter-drawer-offset, 0px) + 16px); }
   .filter-drawer-trigger-visible { @apply translate-x-0 opacity-100; }
   .filter-drawer-backdrop { @apply fixed inset-0 z-[90] bg-[#00112e]/30; }
