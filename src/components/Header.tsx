@@ -1,7 +1,7 @@
 import { ArrowUp, Check, ChevronDown, MapPin, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 
-export type PageId = 'sobre' | 'ibid' | 'clp-estados' | 'clp-municipios'
+export type PageId = 'sobre' | 'ibid' | 'clp-estados' | 'clp-municipios' | 'comparativo'
 
 interface HeaderProps {
   page: PageId
@@ -26,7 +26,7 @@ const tabs: Array<{ id?: PageId; label: string; disabled?: boolean }> = [
   { id: 'sobre', label: 'Sobre o Painel' },
   { id: 'ibid', label: 'IBID' },
   { id: 'clp-estados', label: 'CLP' },
-  { label: 'Comparativo', disabled: true },
+  { id: 'comparativo', label: 'Comparativo' },
 ]
 
 const searchIndex: SearchResult[] = [
@@ -34,6 +34,7 @@ const searchIndex: SearchResult[] = [
   { id: 'ibid', title: 'IBID', subtitle: 'Índice Brasil de Inovação e Desenvolvimento', keywords: 'ibid inovação desenvolvimento estados regiões' },
   { id: 'clp-estados', title: 'CLP — Estados', subtitle: 'Ranking de Competitividade dos Estados', keywords: 'clp ranking competitividade estados regiões' },
   { id: 'clp-municipios', title: 'CLP — Municípios', subtitle: 'Ranking de Competitividade dos Municípios', keywords: 'clp ranking competitividade municípios cidades' },
+  { id: 'comparativo', title: 'Comparativo', subtitle: 'IBID e CLP lado a lado', keywords: 'comparativo comparar estudos ibid clp estados' },
 ]
 
 const fontScales = [0.9, 1, 1.1, 1.2]
@@ -212,7 +213,7 @@ export function Header({ page, fontScale, dataMeta, onNavigate, onFontScaleChang
             alt="Secretaria de Inteligência Artificial, Economia Digital, Ciência, Tecnologia e Inovação — Governo do Piauí"
             className="header-logo"
             height="63"
-            src="/assets/logo.svg"
+            src="/assets/evidencia-logo.svg"
             width="317"
           />
 

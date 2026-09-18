@@ -32,17 +32,24 @@ function cellValue(value?: string) {
   return value?.trim() ? value : '—'
 }
 
+const levelArticles: Record<DetailRow['level'], string> = {
+  Grupo: 'do grupo',
+  Pilar: 'do pilar',
+  Dimensão: 'da dimensão',
+  Indicador: 'do indicador',
+}
+
 function LevelBadges({ row }: { row: DetailRow }) {
   return (
     <span className="level-badge-stack">
       <span className="level-badge">{row.level}</span>
-      {row.updateYear && (
-        <span className="level-badge level-badge-year" title={`Dados atualizados até ${row.updateYear}`}>
-          <span className="sr-only">Atualizado até </span>{row.updateYear}
-        </span>
-      )}
     </span>
   )
+}
+
+function UpdateNote({ row }: { row: DetailRow }) {
+  if (!row.updateYear) return null
+  return <span className="detail-update-note">Última atualização {levelArticles[row.level]} em {row.updateYear}</span>
 }
 
 export function DetailTable({
@@ -109,7 +116,10 @@ export function DetailTable({
                   {hasChildren ? (isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />) : null}
                 </span>
                 <LevelBadges row={row} />
-                <span className="detail-row-title">{row.title}</span>
+                <span className="detail-row-title-group">
+                  <span className="detail-row-title">{row.title}</span>
+                  <UpdateNote row={row} />
+                </span>
               </button>
             </td>
             <td>{cellValue(row.nationalRank)}</td>
@@ -169,6 +179,7 @@ export function DetailTable({
                   <span className="detail-mobile-title-group">
                     <LevelBadges row={row} />
                     <span className="detail-mobile-row-title">{row.title}</span>
+                    <UpdateNote row={row} />
                   </span>
                 </button>
                 {hasMoreInformation && (

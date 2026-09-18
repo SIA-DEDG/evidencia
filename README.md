@@ -22,8 +22,9 @@ npm run preview
 - IBID
 - CLP — Estados
 - CLP — Municípios
+- Comparativo — IBID × CLP
 
-O item Comparativo permanece visível e desabilitado no menu, conforme o layout de referência.
+O comparativo reúne as notas gerais do IBID e do CLP para o mesmo estado e ano.
 
 ## Banco de dados
 

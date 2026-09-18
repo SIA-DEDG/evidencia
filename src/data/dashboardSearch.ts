@@ -76,8 +76,10 @@ function findMentionedOptions(query: string, filter: FilterDefinition) {
 
 function metricScore(query: string, option: SelectOption) {
   const normalizedLabel = normalizeSearchText(option.label)
-  const specificLabel = normalizedLabel
+  // Rótulos do filtro: "1.1 Instituições", "Instituições › Ambiente regulatório", "Nota Geral (IBID)".
+  const specificLabel = normalizeSearchText(option.label.split('›').at(-1) ?? option.label)
     .replace(/^(nota geral|grupo|pilar|dimensao|indicador) /, '')
+    .replace(/^(\d+ )+/, '')
     .replace(/\b(ibid|clp)\b/g, '')
     .trim()
   const queryTokens = query.split(' ').filter(Boolean)
@@ -102,8 +104,9 @@ export function detectDashboardKind(command: string, currentPage: PageId): Dashb
   if (/\b(sobre|inicio|apresentacao)\b/.test(query) && !/\b(ibid|clp)\b/.test(query)) return 'sobre'
   if (/\bibid\b/.test(query)) return 'ibid'
   if (/\b(municipio|municipios|municipal|cidade|cidades)\b/.test(query)) return 'clp-municipios'
-  if (/\bclp\b/.test(query)) return currentPage.startsWith('clp') ? currentPage : 'clp-estados'
-  return currentPage === 'sobre' ? 'ibid' : currentPage
+  if (/\bclp\b/.test(query)) return currentPage === 'clp-municipios' ? currentPage : 'clp-estados'
+  if (currentPage === 'sobre' || currentPage === 'comparativo') return 'ibid'
+  return currentPage
 }
 
 export function interpretDashboardSearch(command: string, dashboard: DashboardDataset): DashboardSearchInterpretation {

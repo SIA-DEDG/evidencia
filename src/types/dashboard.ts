@@ -3,6 +3,8 @@ export type DashboardKind = 'ibid' | 'clp-estados' | 'clp-municipios'
 export interface SelectOption {
   label: string
   value: string
+  /** Seção do select (optgroup) em que a opção aparece. */
+  group?: string
 }
 
 export interface FilterDefinition {
@@ -147,5 +149,13 @@ export interface DashboardDataset {
   highlights: HighlightGroup[]
   /** Pilares, dimensões e indicadores relacionados à métrica selecionada, agrupados por nível. */
   insightGroups?: InsightGroup[]
+  /** Nível da métrica selecionada quando ela é um pilar, dimensão ou indicador (ausente na nota geral e em grupos). */
+  metricLevel?: InsightGroup['level']
   details: DetailRow[]
+}
+
+export interface ComparisonDataset {
+  ibid: DashboardDataset
+  clp: DashboardDataset
+  meta: DashboardDataset['meta']
 }

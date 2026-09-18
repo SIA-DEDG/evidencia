@@ -43,6 +43,12 @@ const sections = [
     description: 'Ranking de Competitividade dos Municípios',
     keywords: 'clp ranking competitividade municípios cidades',
   },
+  {
+    id: 'comparativo',
+    label: 'Comparativo',
+    description: 'IBID e CLP lado a lado',
+    keywords: 'comparativo comparar estudos ibid clp estados',
+  },
 ] as const
 
 export function createEvidenciaHeaderSearch({

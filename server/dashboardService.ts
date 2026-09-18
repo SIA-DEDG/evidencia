@@ -519,6 +519,73 @@ function buildInsightItems(
   })
 }
 
+/** Filhos de cada componente na ordem de exibição e a numeração hierárquica (ex.: [1, 2] = 1.2) a partir da nota geral. */
+function indexComponents(components: ComponentRow[]) {
+  const byParent = new Map<string, ComponentRow[]>()
+  for (const component of components) {
+    if (!component.parent_id) continue
+    const siblings = byParent.get(component.parent_id) ?? []
+    siblings.push(component)
+    byParent.set(component.parent_id, siblings)
+  }
+  for (const siblings of byParent.values()) {
+    siblings.sort((a, b) => (a.ordem_exibicao ?? 9999) - (b.ordem_exibicao ?? 9999) || a.nome.localeCompare(b.nome, 'pt-BR'))
+  }
+
+  const general = components.find((component) => component.tipo === 'GERAL')
+  const roots = general ? byParent.get(general.id) ?? [] : components.filter((component) => !component.parent_id)
+  const pathByComponent = new Map<string, number[]>()
+  const indexPaths = (items: ComponentRow[], parentPath: number[] = []) => {
+    items.forEach((item, index) => {
+      const path = [...parentPath, index + 1]
+      pathByComponent.set(item.id, path)
+      indexPaths(byParent.get(item.id) ?? [], path)
+    })
+  }
+  indexPaths(roots)
+
+  return { byParent, general, roots, pathByComponent }
+}
+
+const metricGroupLabels: Record<string, string> = {
+  GERAL: 'Geral',
+  GRUPO: 'Grupos',
+  PILAR: 'Pilares',
+  DIMENSAO: 'Dimensões',
+}
+
+/**
+ * Opções do filtro de métrica agrupadas por tipo e na ordem da estrutura.
+ * Os dois primeiros níveis levam a numeração (1. / 1.1); os mais profundos, o nome do componente pai (Pilar › Dimensão).
+ */
+function buildMetricOptions(metrics: ComponentRow[], components: ComponentRow[], metricTypes: readonly string[], kind: DashboardKind): SelectOption[] {
+  const byId = new Map(components.map((component) => [component.id, component]))
+  const { pathByComponent } = indexComponents(components)
+  const comparePaths = (a: number[] | undefined, b: number[] | undefined) => {
+    if (!a || !b) return (a ? 0 : 1) - (b ? 0 : 1)
+    for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
+      if (a[index] !== b[index]) return a[index] - b[index]
+    }
+    return a.length - b.length
+  }
+
+  return metrics
+    .slice()
+    .sort((a, b) => metricTypes.indexOf(a.tipo) - metricTypes.indexOf(b.tipo)
+      || comparePaths(pathByComponent.get(a.id), pathByComponent.get(b.id))
+      || a.nome.localeCompare(b.nome, 'pt-BR'))
+    .map((metric) => {
+      const path = pathByComponent.get(metric.id)
+      const parentId = byId.get(metric.id)?.parent_id
+      const parent = parentId ? byId.get(parentId) : undefined
+      let label = metric.nome
+      if (metric.tipo === 'GERAL') label = kind === 'ibid' ? 'Nota Geral (IBID)' : 'Nota Geral (CLP)'
+      else if (path && path.length <= 2) label = `${path.length === 1 ? `${path[0]}.` : path.join('.')} ${metric.nome}`
+      else if (parent && parent.tipo !== 'GERAL') label = `${parent.nome} › ${metric.nome}`
+      return { label, value: metric.codigo, group: metricGroupLabels[metric.tipo] ?? typeLabels[metric.tipo] }
+    })
+}
+
 function buildDetails(
   components: ComponentRow[],
   detailResults: DetailResultRow[],
@@ -531,16 +598,7 @@ function buildDetails(
   selectedYear: number,
   entities: TerritoryRow[],
 ) {
-  const byParent = new Map<string, ComponentRow[]>()
-  for (const component of components) {
-    if (!component.parent_id) continue
-    const siblings = byParent.get(component.parent_id) ?? []
-    siblings.push(component)
-    byParent.set(component.parent_id, siblings)
-  }
-  for (const siblings of byParent.values()) {
-    siblings.sort((a, b) => (a.ordem_exibicao ?? 9999) - (b.ordem_exibicao ?? 9999) || a.nome.localeCompare(b.nome, 'pt-BR'))
-  }
+  const { byParent, general, roots, pathByComponent } = indexComponents(components)
 
   const resultByComponent = new Map<string, DetailResultRow[]>()
   for (const result of detailResults) {
@@ -594,20 +652,6 @@ function buildDetails(
       children: childRows,
     }
   }
-
-  const general = components.find((component) => component.tipo === 'GERAL')
-  const roots = general ? byParent.get(general.id) ?? [] : components.filter((component) => !component.parent_id)
-  const pathByComponent = new Map<string, number[]>()
-
-  function indexPaths(items: ComponentRow[], parentPath: number[] = []) {
-    items.forEach((item, index) => {
-      const path = [...parentPath, index + 1]
-      pathByComponent.set(item.id, path)
-      indexPaths(byParent.get(item.id) ?? [], path)
-    })
-  }
-
-  indexPaths(roots)
 
   if (general?.id !== selectedMetricId) {
     const selectedMetric = components.find((component) => component.id === selectedMetricId)
@@ -917,20 +961,21 @@ export class DashboardService {
         label: `${region.nome} · ${states.filter((state) => state.parent_id === region.id).length} estados`,
         value: region.codigo,
       }))
+      const metricOptions = buildMetricOptions(metrics, components, config.metricTypes, kind)
       const filters: FilterDefinition[] = kind === 'clp-municipios'
         ? [
             { id: 'state', label: 'Estado', value: selectedState.codigo, options: stateOptions },
             { id: 'primary', label: 'Município principal', value: primary.codigo, options: primaryOptions },
             { id: 'comparison', label: 'Comparação com o município', value: comparison?.codigo ?? '', options: [{ label: 'Selecione um município', value: '' }, ...primaryOptions.filter((option) => option.value !== primary.codigo)] },
             { id: 'year', label: 'Ano', value: String(selectedYear), options: years.slice().reverse().map((year) => ({ label: String(year), value: String(year) })) },
-            { id: 'metric', label: 'Métrica', value: metric.codigo, options: metrics.map((item) => ({ label: titleForMetric(item, kind), value: item.codigo })) },
+            { id: 'metric', label: 'Métrica', value: metric.codigo, options: metricOptions },
           ]
         : [
             { id: 'primary', label: 'Estado principal', value: primary.codigo, options: stateOptions },
             { id: 'comparison', label: 'Comparação com', value: comparison?.codigo ?? '', options: [{ label: 'Selecione um estado', value: '' }, ...stateOptions.filter((option) => option.value !== primary.codigo)] },
             { id: 'region', label: 'Região', value: selectedRegion?.codigo ?? '', options: regionOptions, disabled: true },
             { id: 'year', label: 'Ano', value: String(selectedYear), options: years.slice().reverse().map((year) => ({ label: String(year), value: String(year) })) },
-            { id: 'metric', label: 'Métrica', value: metric.codigo, options: metrics.map((item) => ({ label: titleForMetric(item, kind), value: item.codigo })) },
+            { id: 'metric', label: 'Métrica', value: metric.codigo, options: metricOptions },
           ]
 
       const selectedStateResults = allResults.filter(
@@ -978,6 +1023,7 @@ export class DashboardService {
         comparisonHistory: historyFor(comparison, entityResults, allTerritories),
         highlights,
         insightGroups,
+        metricLevel: (insightLevels as readonly string[]).includes(metric.tipo) ? typeLabels[metric.tipo] as InsightGroup['level'] : undefined,
         details,
       }
     } finally {

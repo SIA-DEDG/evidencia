@@ -27,7 +27,11 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
   const metricLabel = data.summary[0]?.metric ?? 'Nota Geral'
   const selectedYear = data.filters.find((filter) => filter.id === 'year')?.value ?? ''
   const hasComparison = Boolean(data.filters.find((filter) => filter.id === 'comparison')?.value)
-  const [insightLevel, setInsightLevel] = useState<InsightGroup['level']>('Pilar')
+  const metricValue = data.filters.find((filter) => filter.id === 'metric')?.value
+  // Ao trocar a métrica, o detalhamento acompanha o nível dela (pilar, dimensão ou indicador); com a mesma métrica, vale a escolha manual.
+  const [insightChoice, setInsightChoice] = useState<{ metric?: string; level: InsightGroup['level'] }>({ metric: metricValue, level: data.metricLevel ?? 'Pilar' })
+  const insightLevel = insightChoice.metric === metricValue ? insightChoice.level : data.metricLevel ?? 'Pilar'
+  const setInsightLevel = (level: InsightGroup['level']) => setInsightChoice({ metric: metricValue, level })
   const [insightQuery, setInsightQuery] = useState('')
   const primaryState = municipal ? undefined : data.filters.find((filter) => filter.id === 'primary')?.value
   const comparisonState = municipal ? undefined : data.filters.find((filter) => filter.id === 'comparison')?.value

@@ -8,7 +8,7 @@ import {
 import '@sia-dedg/shared-ui/styles.css'
 import { createEvidenciaHeaderSearch } from '../data/headerSearchAdapter'
 
-export type PageId = 'sobre' | 'ibid' | 'clp-estados' | 'clp-municipios'
+export type PageId = 'sobre' | 'ibid' | 'clp-estados' | 'clp-municipios' | 'comparativo'
 
 interface HeaderIntegrationProps {
   page: PageId
@@ -23,7 +23,7 @@ const navigationItems: readonly HeaderNavigationItem[] = [
   { id: 'sobre', label: 'Sobre o Painel' },
   { id: 'ibid', label: 'IBID' },
   { id: 'clp-estados', label: 'CLP' },
-  { id: 'comparativo', label: 'Comparativo', disabled: true },
+  { id: 'comparativo', label: 'Comparativo' },
 ]
 
 export function HeaderIntegration({

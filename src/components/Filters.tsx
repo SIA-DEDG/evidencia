@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { FilterDefinition } from '../types/dashboard'
+import type { FilterDefinition, SelectOption } from '../types/dashboard'
 
 interface FiltersProps {
   filters: FilterDefinition[]
@@ -22,6 +22,19 @@ export function Filters({ filters, onChange }: FiltersProps) {
     })
   }
 
+  function renderOptions(options: SelectOption[]) {
+    if (!options.some((option) => option.group)) {
+      return options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)
+    }
+    const groups = new Map<string, SelectOption[]>()
+    for (const option of options) groups.set(option.group ?? '', [...(groups.get(option.group ?? '') ?? []), option])
+    return [...groups].map(([group, items]) => (
+      <optgroup key={group} label={group}>
+        {items.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </optgroup>
+    ))
+  }
+
   function renderFilter(filter: FilterDefinition) {
     return (
       <div className="min-w-0" key={filter.id}>
@@ -33,7 +46,7 @@ export function Filters({ filters, onChange }: FiltersProps) {
           onChange={(event) => update(filter.id, event.target.value)}
           value={values[filter.id] ?? ''}
         >
-          {filter.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          {renderOptions(filter.options)}
         </select>
       </div>
     )
