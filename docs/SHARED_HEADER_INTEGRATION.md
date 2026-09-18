@@ -96,7 +96,7 @@ O CSS do componente já é compilado a partir do Tailwind e possui classes prefi
 ```tsx
 <SiaHeader
   currentProject="evidencia"
-  logoSrc="/assets/logo.svg"
+  logoSrc="/assets/evidencia-logo.svg"
   logoAlt="Descrição acessível da logo"
   homeHref="/#/sobre"
   onHome={() => onNavigate('sobre')}
