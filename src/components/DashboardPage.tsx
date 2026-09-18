@@ -1,8 +1,9 @@
 import { Building2, MapPinned } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { DashboardDataset, InsightGroup } from '../types/dashboard'
 import { BrazilMap } from './BrazilMap'
 import { DetailTable } from './DetailTable'
+import { FilterDrawer } from './FilterDrawer'
 import { Filters } from './Filters'
 import { Highlights } from './Highlights'
 import { InsightSearch } from './InsightSearch'
@@ -20,6 +21,7 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({ data, onClpModeChange, onFiltersChange }: DashboardPageProps) {
+  const filterPanelRef = useRef<HTMLDivElement>(null)
   const isClp = data.kind.startsWith('clp')
   const municipal = data.kind === 'clp-municipios'
   const primaryLabel = data.summary[0]?.title ?? (municipal ? 'Município principal' : 'Estado principal')
@@ -73,6 +75,9 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
 
   return (
     <main className={`page-shell dashboard-${data.kind}`}>
+      <FilterDrawer targetRef={filterPanelRef} title="Filtros do painel">
+        <Filters filters={data.filters} onChange={onFiltersChange} stacked />
+      </FilterDrawer>
       <div className="dashboard-intro">
         <div className="max-w-[900px]">
           {data.kind === 'ibid' ? (
@@ -105,7 +110,7 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
           : 'Escolha um estado principal, um estado de comparação (opcional), o ano e a métrica desejada. A região é escolhida automaticamente com base no estado principal.'}</p>
       </div>
 
-      <div className="mt-5"><Filters filters={data.filters} onChange={onFiltersChange} /></div>
+      <div className="mt-5" ref={filterPanelRef}><Filters filters={data.filters} onChange={onFiltersChange} /></div>
       <div className="mt-[30px]"><SummaryCards kind={data.kind} labels={data.rankingLabels} national={data.nationalRanking} regional={data.regionalRanking} summary={data.summary} /></div>
       <div className="dashboard-results-panel">
         <div className="dashboard-visual-grid">

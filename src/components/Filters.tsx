@@ -4,9 +4,11 @@ import type { FilterDefinition, SelectOption } from '../types/dashboard'
 interface FiltersProps {
   filters: FilterDefinition[]
   onChange?: (values: Record<string, string>) => void
+  /** Versão em coluna única, usada na gaveta lateral de filtros. */
+  stacked?: boolean
 }
 
-export function Filters({ filters, onChange }: FiltersProps) {
+export function Filters({ filters, onChange, stacked = false }: FiltersProps) {
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(filters.map((filter) => [filter.id, filter.value])))
 
   useEffect(() => {
@@ -35,14 +37,16 @@ export function Filters({ filters, onChange }: FiltersProps) {
     ))
   }
 
+  const idPrefix = stacked ? 'drawer-filter' : 'filter'
+
   function renderFilter(filter: FilterDefinition) {
     return (
       <div className="min-w-0" key={filter.id}>
-        <label className="field-label" htmlFor={`filter-${filter.id}`}>{filter.label}</label>
+        <label className="field-label" htmlFor={`${idPrefix}-${filter.id}`}>{filter.label}</label>
         <select
           className="field-select"
           disabled={filter.disabled}
-          id={`filter-${filter.id}`}
+          id={`${idPrefix}-${filter.id}`}
           onChange={(event) => update(filter.id, event.target.value)}
           value={values[filter.id] ?? ''}
         >
@@ -59,8 +63,8 @@ export function Filters({ filters, onChange }: FiltersProps) {
   const remainingFilters = filters.slice(comparisonStart + 2)
 
   return (
-    <section className="filter-panel" aria-label="Filtros do painel">
-      <div className={municipal ? 'filter-layout filter-layout-municipal' : 'filter-layout filter-layout-state'}>
+    <section className={stacked ? undefined : 'filter-panel'} aria-label="Filtros do painel">
+      <div className={stacked ? 'filter-drawer-fields' : municipal ? 'filter-layout filter-layout-municipal' : 'filter-layout filter-layout-state'}>
         {beforeComparison.map(renderFilter)}
         <div className="filter-comparison-group">
           {renderFilter(comparisonFilters[0])}
