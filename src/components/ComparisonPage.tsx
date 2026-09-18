@@ -471,6 +471,25 @@ function scoreCell(row?: DetailRow) {
   )
 }
 
+function DescriptionCell({ clp, ibid }: { clp?: DetailRow; ibid?: DetailRow }) {
+  const ibidText = ibid?.description?.trim()
+  const clpText = clp?.description?.trim()
+  if (!ibidText && !clpText) return <td className="detail-text-cell comparison-description-cell">—</td>
+  if (!ibidText || !clpText || normalize(ibidText) === normalize(clpText)) {
+    const text = (ibidText || clpText)!
+    return <td className="detail-text-cell comparison-description-cell" title={text}>{text}</td>
+  }
+  return (
+    <td className="detail-text-cell comparison-description-cell" title={`IBID: ${ibidText}
+CLP: ${clpText}`}>
+      <span className="comparison-pair-name">
+        <span><b>IBID</b> {ibidText}</span>
+        <span><b>CLP</b> {clpText}</span>
+      </span>
+    </td>
+  )
+}
+
 function PairName({ clp, ibid }: { clp: string; ibid: string }) {
   if (normalize(ibid) === normalize(clp)) return <>{ibid}</>
   return (
@@ -585,10 +604,11 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
             <col className="comparison-col-concept" />
             <col className="comparison-col-value" />
             <col className="comparison-col-value" />
+            <col className="comparison-col-description" />
             <col className="comparison-col-source" />
           </colgroup>
           <thead>
-            <tr><th className="detail-hierarchy-header">Pilar / indicador relacionado</th><th>IBID</th><th>CLP</th><th>Fonte</th></tr>
+            <tr><th className="detail-hierarchy-header">Pilar / indicador relacionado</th><th>IBID</th><th>CLP</th><th>Descrição</th><th>Fonte</th></tr>
           </thead>
           <tbody>
             {rows.map((row, index) => {
@@ -656,6 +676,8 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
         </td>
         <td>{scoreCell(row.ibid)}</td>
         <td>{scoreCell(row.clp)}</td>
+        {/* A descrição dos pilares na base é a do CLP (escala 0–100) e não vale para o IBID. */}
+        <td className="detail-text-cell comparison-description-cell">—</td>
         <td className="detail-text-cell comparison-source-cell" title={sources}>{sources}</td>
       </tr>
       {isExpanded && childrenRows.map((child) => (
@@ -672,6 +694,7 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
           </td>
           <td>{scoreCell(child.ibid)}</td>
           <td>{scoreCell(child.clp)}</td>
+          <DescriptionCell clp={child.clp} ibid={child.ibid} />
           <td className="detail-text-cell comparison-source-cell" title={child.source}>{child.source}</td>
         </tr>
       ))}
@@ -854,10 +877,8 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
             />
           </div>
         </div>
-      </div>
 
-      <div className="dashboard-results-panel">
-        <section className="min-w-0">
+        <section className="comparison-bars-section">
           <h2 className="section-title">Comparativo de posição e nota entre os estudos</h2>
           <p className="section-description">{stateName} · Nota geral e posição no ranking por ano. As barras usam uma escala comum; os rótulos mostram a nota original (IBID 0–1, CLP 0–100).</p>
           <p className="state-comparison-scroll-hint">Deslize para ver todos os anos</p>
