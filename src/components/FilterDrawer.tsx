@@ -77,10 +77,13 @@ export function FilterDrawer({ children, targetRef, title = 'Filtros' }: FilterD
       {open && <div aria-hidden="true" className="filter-drawer-backdrop" onClick={close} />}
       <aside aria-hidden={!open} aria-label={title} className={`filter-drawer${open ? ' filter-drawer-open' : ''}`}>
         <div className="filter-drawer-header">
+          <div className="filter-drawer-brand">
+            <img alt="EvidencIA Inovação" className="filter-drawer-logo" src="/assets/evidencia-logo.svg" />
+            <button aria-label="Fechar filtros" className="filter-drawer-close" onClick={close} ref={closeRef} type="button">
+              <X aria-hidden="true" size={20} />
+            </button>
+          </div>
           <h2>{title}</h2>
-          <button aria-label="Fechar filtros" className="filter-drawer-close" onClick={close} ref={closeRef} type="button">
-            <X aria-hidden="true" size={20} />
-          </button>
         </div>
         <div className="filter-drawer-body">{children}</div>
       </aside>

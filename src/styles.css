@@ -125,7 +125,9 @@
   .filter-drawer-backdrop { @apply fixed inset-0 z-[90] bg-[#00112e]/30; }
   .filter-drawer { @apply invisible fixed bottom-0 left-0 top-0 z-[91] flex w-[320px] max-w-[88vw] -translate-x-full flex-col bg-[#fdfeff] shadow-[4px_0_24px_rgba(0,17,46,.18)] transition-[transform,visibility] duration-200 dark:bg-slate-900; }
   .filter-drawer-open { @apply visible translate-x-0; }
-  .filter-drawer-header { @apply flex items-center justify-between border-b border-[#e6e6e7] px-5 py-4 dark:border-slate-700; padding-top: calc(env(safe-area-inset-top, 0px) + var(--filter-drawer-offset, 0px) + 16px); }
+  .filter-drawer-header { @apply flex flex-col gap-3 border-b border-[#e6e6e7] px-5 py-4 dark:border-slate-700; padding-top: calc(env(safe-area-inset-top, 0px) + var(--filter-drawer-offset, 0px) + 16px); }
+  .filter-drawer-brand { @apply flex items-center justify-between gap-3; }
+  .filter-drawer-logo { @apply h-9 w-auto max-w-[200px] object-contain object-left; }
   .filter-drawer-header h2 { @apply text-base font-semibold text-brand-700 dark:text-blue-200; }
   .filter-drawer-close { @apply flex h-8 w-8 items-center justify-center rounded-full text-brand-700 hover:bg-[#eef6ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 dark:text-blue-200 dark:hover:bg-slate-800; }
   .filter-drawer-body { @apply flex-1 overflow-y-auto px-5 py-5; }
