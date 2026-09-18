@@ -765,6 +765,15 @@ export class DashboardService {
       const allResults = allResultsQuery.rows
         .filter((row) => editionIdByYear.get(row.ano_referencia) === row.edicao_id)
         .map(({ edicao_id: _editionId, ...row }) => ({ ...row, nota: numberValue(row.nota) }))
+      // Alguns componentes (ex.: pilares do IBID) trazem a posição de um único ano; nos demais,
+      // a posição nacional é calculada pela nota do próprio ano.
+      for (const row of allResults) {
+        if (row.posicao !== null || row.nota === null || row.tipo !== config.entityType) continue
+        row.posicao = valueRank(
+          allResults.filter((other) => other.tipo === config.entityType && other.ano_referencia === row.ano_referencia),
+          row.id,
+        ) ?? null
+      }
       const entityResults = allResults.filter((row) => row.tipo === config.entityType)
       const years = [...new Set(entityResults.map((row) => row.ano_referencia))].sort((a, b) => a - b)
       const selectedYear = years.includes(Number(values.year)) ? Number(values.year) : years.at(-1)
@@ -870,14 +879,32 @@ export class DashboardService {
         }
         if (kind === 'ibid' && scopeTerritory?.id) detailTerritoryIds.add(scopeTerritory.id)
         if (kind === 'ibid' && comparisonScopeTerritory?.id) detailTerritoryIds.add(comparisonScopeTerritory.id)
-        const detailResult = await client.query<DetailResultRow>(`
-          select rr.componente_id, rr.territorio_id as id,
-            rr.nota_normalizada::float8 as nota, rr.posicao
-          from resultado_ranking rr
-          where rr.edicao_id = $1 and rr.componente_id = any($2::uuid[])
-            and rr.ano_referencia = $3
-            and rr.territorio_id = any($4::uuid[])
-        `, [edition.id, componentIds, selectedYear, [...detailTerritoryIds]])
+        const detailResult = kind === 'ibid'
+          // O IBID só traz a posição dos pilares em alguns anos: nos demais, ela sai da ordem das notas entre os estados.
+          ? await client.query<DetailResultRow>(`
+              select componente_id, id, nota, posicao from (
+                select rr.componente_id, rr.territorio_id as id, rr.nota_normalizada::float8 as nota,
+                  coalesce(rr.posicao, case when t.tipo = $5 and rr.nota_normalizada is not null then
+                    rank() over (
+                      partition by rr.componente_id, t.tipo = $5, rr.nota_normalizada is null
+                      order by rr.nota_normalizada desc
+                    )
+                  end)::integer as posicao
+                from resultado_ranking rr
+                join territorio t on t.id = rr.territorio_id
+                where rr.edicao_id = $1 and rr.componente_id = any($2::uuid[])
+                  and rr.ano_referencia = $3
+              ) ranked
+              where id = any($4::uuid[])
+            `, [edition.id, componentIds, selectedYear, [...detailTerritoryIds], config.entityType])
+          : await client.query<DetailResultRow>(`
+              select rr.componente_id, rr.territorio_id as id,
+                rr.nota_normalizada::float8 as nota, rr.posicao
+              from resultado_ranking rr
+              where rr.edicao_id = $1 and rr.componente_id = any($2::uuid[])
+                and rr.ano_referencia = $3
+                and rr.territorio_id = any($4::uuid[])
+            `, [edition.id, componentIds, selectedYear, [...detailTerritoryIds]])
         const detailRows = detailResult.rows.map((row) => ({ ...row, nota: numberValue(row.nota) }))
         details = buildDetails(
           components,
