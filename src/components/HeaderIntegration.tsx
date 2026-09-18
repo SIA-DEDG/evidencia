@@ -52,6 +52,14 @@ export function HeaderIntegration({
         homeHref="/#/sobre"
         logoAlt="EvidencIA Inovação"
         logoSrc="/assets/evidencia-logo.svg"
+        logos={[
+          {
+            src: '/assets/sia-logo.png',
+            alt: 'Secretaria de Inteligência Artificial, Economia Digital, Ciência, Tecnologia e Inovação — Governo do Estado do Piauí',
+            width: 242,
+            height: 66,
+          },
+        ]}
         navigationItems={navigationItems}
         onFontScaleChange={onFontScaleChange}
         onHome={() => onNavigate('sobre')}
