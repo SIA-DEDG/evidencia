@@ -12,10 +12,11 @@ interface BrazilMapProps {
   onSelect?: (code: string) => void
   ranking: RankingItem[]
   selectedCode?: string
+  tooltipLines?: (item: RankingItem) => string[]
   year: string
 }
 
-export function BrazilMap({ comparisonCode, decimals, kind, metricLabel, onSelect, ranking, selectedCode, year }: BrazilMapProps) {
+export function BrazilMap({ comparisonCode, decimals, kind, metricLabel, onSelect, ranking, selectedCode, tooltipLines, year }: BrazilMapProps) {
   // Os ids do mapa são as siglas das UFs em minúsculas.
   const itemBySigla = new Map(ranking.map((item) => [item.name.toLowerCase(), item]))
 
@@ -34,6 +35,7 @@ export function BrazilMap({ comparisonCode, decimals, kind, metricLabel, onSelec
       selectedCode={selectedCode}
       title={`Mapa do Brasil por nota${year ? ` (${year})` : ''}`}
       titleId="brazil-map-title"
+      tooltipLines={tooltipLines}
       viewBox={map.viewBox}
     />
   )

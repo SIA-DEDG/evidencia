@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Info } from 'lucide-react'
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useMemo, useRef, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -8,14 +8,19 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
   type LabelProps,
   type TooltipContentProps,
 } from 'recharts'
-import type { ComparisonDataset, DashboardDataset, DetailRow, SelectOption } from '../types/dashboard'
+import { BrazilMap } from './BrazilMap'
+import { FilterDrawer } from './FilterDrawer'
+import type { ComparisonDataset, DashboardDataset, DetailRow, RankingItem, SelectOption } from '../types/dashboard'
 
 interface ComparisonPageProps {
   data: ComparisonDataset
@@ -24,8 +29,8 @@ interface ComparisonPageProps {
 
 interface ComparisonDatum {
   year: number
-  ibid: number | null
-  clp: number | null
+  ibidPlot: number | null
+  clpPlot: number | null
   ibidRaw: number | null
   clpRaw: number | null
   ibidLabel: string | null
@@ -82,7 +87,9 @@ function commonOptions(first: SelectOption[], second: SelectOption[]) {
   return first.filter((option) => secondValues.has(option.value))
 }
 
-function scoreToCommonScale(kind: 'ibid' | 'clp', value: number | null) {
+// IBID vai de 0 a 1 e CLP de 0 a 100: os gráficos plotam ambos em 0–100, mas rótulos,
+// eixos e tooltips exibem sempre a nota original de cada estudo.
+function scoreToPlotScale(kind: 'ibid' | 'clp', value: number | null) {
   if (value === null) return null
   return kind === 'ibid' ? value * 100 : value
 }
@@ -112,8 +119,8 @@ function comparisonData(data: ComparisonDataset): ComparisonDatum[] {
     const clpRank = clpHistory.get(year)
     return {
       year,
-      ibid: scoreToCommonScale('ibid', ibidRaw),
-      clp: scoreToCommonScale('clp', clpRaw),
+      ibidPlot: scoreToPlotScale('ibid', ibidRaw),
+      clpPlot: scoreToPlotScale('clp', clpRaw),
       ibidRaw,
       clpRaw,
       ibidLabel: ibidRaw === null ? null : `${ibidRank?.national ?? '—'}|${rawScore(ibidRaw, 3)}`,
@@ -133,7 +140,7 @@ function ChartTooltip({ active, label, payload }: TooltipContentProps) {
     <div className="chart-tooltip">
       <strong>{label}</strong>
       {payload.map((entry) => {
-        const isIbid = entry.dataKey === 'ibid' || entry.dataKey === 'ibidPosition'
+        const isIbid = String(entry.dataKey).startsWith('ibid')
         const position = isIbid ? datum?.ibidPosition : datum?.clpPosition
         const value = isIbid ? datum?.ibidRaw : datum?.clpRaw
         const decimals = isIbid ? 3 : 2
@@ -220,6 +227,199 @@ function PositionLabel({ value, width, x, y }: LabelProps) {
       <tspan fontWeight="700" x={x + width / 2}>{position === '—' ? position : `${position}º`}</tspan>
       <tspan fontSize="12" x={x + width / 2} dy="18">{score}</tspan>
     </text>
+  )
+}
+
+interface StatePoint {
+  code: string
+  sigla: string
+  name: string
+  ibid: number
+  clp: number
+  ibidPosition: number
+  clpPosition: number
+}
+
+function median(values: number[]) {
+  const sorted = [...values].sort((a, b) => a - b)
+  const middle = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+}
+
+function statePoints(data: ComparisonDataset): StatePoint[] {
+  const clpByCode = new Map((data.clp.stateRanking ?? []).map((item) => [item.code, item]))
+  return (data.ibid.stateRanking ?? []).flatMap((ibid) => {
+    const clp = clpByCode.get(ibid.code)
+    if (!ibid.code || !clp || ibid.wasNull || clp.wasNull) return []
+    return [{
+      code: ibid.code,
+      sigla: ibid.name.toUpperCase(),
+      name: ibid.label ?? ibid.name,
+      ibid: ibid.value,
+      clp: clp.value,
+      ibidPosition: ibid.position,
+      clpPosition: clp.position,
+    }]
+  })
+}
+
+function ScatterTooltip({ active, payload }: TooltipContentProps) {
+  const point = payload?.[0]?.payload as StatePoint | undefined
+  if (!active || !point) return null
+  return (
+    <div className="chart-tooltip">
+      <strong>{point.name} ({point.sigla})</strong>
+      <p><span style={{ backgroundColor: colors.ibid }} />IBID: {rawScore(point.ibid, 3)} · {point.ibidPosition}º lugar</p>
+      <p><span style={{ backgroundColor: colors.clp }} />CLP: {rawScore(point.clp, 2)} · {point.clpPosition}º lugar</p>
+    </div>
+  )
+}
+
+function SiglaLabel({ selected = false, value, x, y }: LabelProps & { selected?: boolean }) {
+  if (typeof x !== 'number' || typeof y !== 'number') return null
+  return selected
+    ? <text fill="#041d3b" fontSize="13" fontWeight="700" paintOrder="stroke" stroke="#fff" strokeWidth={3} textAnchor="middle" x={x} y={y - 12}>{value}</text>
+    : <text fill="#54555a" fontSize="10" textAnchor="middle" x={x} y={y - 8}>{value}</text>
+}
+
+function SelectedPoint({ cx, cy }: { cx?: number; cy?: number }) {
+  if (typeof cx !== 'number' || typeof cy !== 'number') return null
+  return <circle cx={cx} cy={cy} fill="#041d3b" r={7} stroke="#fff" strokeWidth={2} />
+}
+
+function AgreementScatter({ data, onSelect, selectedState, stateName, year }: {
+  data: ComparisonDataset
+  onSelect: (code: string) => void
+  selectedState: string
+  stateName: string
+  year: string
+}) {
+  const points = useMemo(() => statePoints(data), [data])
+  if (!points.length) return null
+  const ibidMedian = median(points.map((point) => point.ibid))
+  const clpMedian = median(points.map((point) => point.clp))
+  const ibidDomainMax = Math.min(1, Math.ceil((Math.max(...points.map((point) => point.ibid)) + 0.05) * 10) / 10)
+  const clpDomainMax = Math.min(100, Math.ceil((Math.max(...points.map((point) => point.clp)) + 5) / 10) * 10)
+  const selected = points.find((point) => point.code === selectedState)
+  const quadrant = selected
+    ? selected.ibid >= ibidMedian
+      ? selected.clp >= clpMedian ? 'acima da mediana nos dois estudos' : 'acima da mediana no IBID e abaixo no CLP'
+      : selected.clp >= clpMedian ? 'abaixo da mediana no IBID e acima no CLP' : 'abaixo da mediana nos dois estudos'
+    : null
+
+  return (
+    <section className="series-chart min-w-0">
+      <h2 className="section-title">IBID × CLP entre os estados {year ? `(${year})` : ''}</h2>
+      <p className="section-description">
+        Cada ponto é um estado; as linhas tracejadas marcam a mediana de cada estudo.
+        {quadrant ? ` ${stateName} está ${quadrant}.` : ''} Clique em um ponto para selecionar o estado.
+      </p>
+      <div className="comparison-scatter-canvas min-w-0">
+        <ResponsiveContainer height="100%" width="100%">
+          <ScatterChart accessibilityLayer margin={{ bottom: 24, left: 8, right: 16, top: 16 }}>
+            <CartesianGrid stroke="rgba(191,208,224,.62)" />
+            <XAxis
+              axisLine={{ stroke: '#bfbfbf' }}
+              dataKey="ibid"
+              domain={[0, ibidDomainMax]}
+              label={{ fill: colors.ibid, fontSize: 12, fontWeight: 600, position: 'bottom', value: 'Nota IBID (0–1)' }}
+              name="IBID"
+              tick={{ fill: '#54555a', fontSize: 12 }}
+              tickFormatter={(value: number) => value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
+              tickLine={false}
+              type="number"
+            />
+            <YAxis
+              axisLine={false}
+              dataKey="clp"
+              domain={[0, clpDomainMax]}
+              label={{ angle: -90, fill: '#5b7fc7', fontSize: 12, fontWeight: 600, position: 'insideLeft', value: 'Nota CLP (0–100)' }}
+              name="CLP"
+              tick={{ fill: '#54555a', fontSize: 12 }}
+              tickLine={false}
+              type="number"
+              width={48}
+            />
+            <ReferenceLine stroke="#9aa9bb" strokeDasharray="4 4" x={ibidMedian} />
+            <ReferenceLine stroke="#9aa9bb" strokeDasharray="4 4" y={clpMedian} />
+            <Tooltip content={ScatterTooltip} cursor={{ strokeDasharray: '3 3' }} />
+            <Scatter
+              data={points.filter((point) => point.code !== selectedState)}
+              fill={colors.ibid}
+              fillOpacity={0.55}
+              isAnimationActive={false}
+              onClick={(point) => onSelect((point as unknown as StatePoint).code)}
+              style={{ cursor: 'pointer' }}
+            >
+              <LabelList content={<SiglaLabel />} dataKey="sigla" />
+            </Scatter>
+            {selected && (
+              <Scatter data={[selected]} fill="#041d3b" isAnimationActive={false} shape={<SelectedPoint />}>
+                <LabelList content={<SiglaLabel selected />} dataKey="sigla" />
+              </Scatter>
+            )}
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="source-line">Fontes: {data.ibid.meta.source} · {data.clp.meta.source}</p>
+    </section>
+  )
+}
+
+function rankNumber(value?: string) {
+  const parsed = Number.parseInt(value ?? '', 10)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function PillarDumbbell({ data, stateName }: { data: ComparisonDataset; stateName: string }) {
+  const total = Math.max(27, ...(data.ibid.stateRanking ?? []).map((item) => item.position))
+  const rows = concepts.map((concept) => ({
+    ...concept,
+    ibid: rankNumber(findConcept(data.ibid.details, concept)?.nationalRank),
+    clp: rankNumber(findConcept(data.clp.details, concept)?.nationalRank),
+  }))
+  const offset = (position: number) => ((position - 1) / (total - 1)) * 100
+  const ticks = [...new Set([1, 5, 10, 15, 20, 25, total])].filter((value) => value <= total)
+
+  return (
+    <section className="min-w-0">
+      <h2 className="section-title">Posição por pilar nos dois estudos</h2>
+      <p className="section-description">
+        Posição de {stateName} no ranking Brasil em cada conceito comum. Quanto mais longo o traço, mais os estudos discordam; mais à esquerda, melhor a colocação.
+      </p>
+      <div className="comparison-dumbbell" role="list">
+        {rows.map((row) => {
+          const gap = row.ibid !== null && row.clp !== null ? Math.abs(row.ibid - row.clp) : null
+          return (
+            <div className="comparison-dumbbell-row" key={row.id} role="listitem">
+              <span className="comparison-dumbbell-title">{row.title}</span>
+              <div aria-label={`${row.title}: IBID ${row.ibid ?? '—'}º, CLP ${row.clp ?? '—'}º`} className="comparison-dumbbell-track" role="img">
+                {row.ibid !== null && row.clp !== null && (
+                  <span
+                    className="comparison-dumbbell-bar"
+                    style={{ left: `${offset(Math.min(row.ibid, row.clp))}%`, width: `${offset(Math.max(row.ibid, row.clp)) - offset(Math.min(row.ibid, row.clp))}%` }}
+                  />
+                )}
+                {row.clp !== null && <span className="comparison-dumbbell-dot" style={{ backgroundColor: colors.clp, left: `${offset(row.clp)}%` }}><b>{row.clp}º</b></span>}
+                {row.ibid !== null && <span className="comparison-dumbbell-dot" style={{ backgroundColor: colors.ibid, left: `${offset(row.ibid)}%` }}><b>{row.ibid}º</b></span>}
+              </div>
+              <span className="comparison-dumbbell-gap">{gap === null ? '—' : gap === 0 ? 'igual' : `${gap} pos.`}</span>
+            </div>
+          )
+        })}
+        <div aria-hidden="true" className="comparison-dumbbell-row comparison-dumbbell-axis">
+          <span />
+          <div className="comparison-dumbbell-track">
+            {ticks.map((tick) => <span key={tick} style={{ left: `${offset(tick)}%` }}>{tick}º</span>)}
+          </div>
+          <span className="comparison-dumbbell-gap">Diferença</span>
+        </div>
+      </div>
+      <ul className="comparison-dumbbell-legend">
+        <li><span style={{ backgroundColor: colors.ibid }} />IBID</li>
+        <li><span style={{ backgroundColor: colors.clp }} />CLP</li>
+      </ul>
+    </section>
   )
 }
 
@@ -475,13 +675,50 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
   const chartData = useMemo(() => comparisonData(data), [data])
   const period = chartData.length ? `${chartData[0].year}–${chartData.at(-1)?.year}` : ''
   const maxPosition = Math.max(27, ...chartData.map((item) => item.total ?? 0))
+  const filterPanelRef = useRef<HTMLElement>(null)
+  const [mapStudy, setMapStudy] = useState<'ibid' | 'clp'>('ibid')
+  const mapData = mapStudy === 'ibid' ? data.ibid : data.clp
+  const ibidByState = useMemo(() => new Map((data.ibid.stateRanking ?? []).map((item) => [item.code, item])), [data.ibid])
+  const clpByState = useMemo(() => new Map((data.clp.stateRanking ?? []).map((item) => [item.code, item])), [data.clp])
+
+  function mapTooltipLines(item: RankingItem) {
+    const line = (label: string, entry: RankingItem | undefined, decimals: number) =>
+      !entry || entry.wasNull ? `${label}: sem dado` : `${label}: ${rawScore(entry.value, decimals)} · ${entry.position}º lugar`
+    return [line('IBID', ibidByState.get(item.code), 3), line('CLP', clpByState.get(item.code), 2)]
+  }
 
   function updateFilter(id: 'primary' | 'year', value: string) {
     onFiltersChange({ primary: id === 'primary' ? value : selectedState, year: id === 'year' ? value : selectedYear })
   }
 
+  const filterFields = (
+    <>
+    <label className="min-w-0">
+      <span className="field-label">Estado</span>
+      <select className="field-select" onChange={(event) => updateFilter('primary', event.target.value)} value={selectedState}>
+        {states.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+    </label>
+    <label className="min-w-0">
+      <span className="field-label">Ano</span>
+      <select className="field-select" onChange={(event) => updateFilter('year', event.target.value)} value={selectedYear}>
+        {years.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+    </label>
+    <label className="min-w-0">
+      <span className="field-label">Métrica</span>
+      <select aria-readonly="true" className="field-select" disabled value="geral">
+        <option value="geral">Notas Gerais · IBID e CLP</option>
+      </select>
+    </label>
+    </>
+  )
+
   return (
     <main className="page-shell dashboard-comparativo">
+      <FilterDrawer targetRef={filterPanelRef} title="Filtros do comparativo">
+        <div className="filter-drawer-fields">{filterFields}</div>
+      </FilterDrawer>
       <div className="dashboard-intro">
         <div className="max-w-[977px]">
           <h1 className="text-xl font-semibold text-brand-700">Comparativo entre os estudos</h1>
@@ -494,26 +731,9 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
         <p>Escolha um estado e um ano para comparar sua nota geral, a posição no ranking e os conceitos relacionados nos dois estudos.</p>
       </div>
 
-      <section className="filter-panel mt-5" aria-label="Filtros do comparativo">
+      <section className="filter-panel mt-5" aria-label="Filtros do comparativo" ref={filterPanelRef}>
         <div className="filter-layout comparison-filter-layout">
-          <label className="min-w-0">
-            <span className="field-label">Estado</span>
-            <select className="field-select" onChange={(event) => updateFilter('primary', event.target.value)} value={selectedState}>
-              {states.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-          </label>
-          <label className="min-w-0">
-            <span className="field-label">Ano</span>
-            <select className="field-select" onChange={(event) => updateFilter('year', event.target.value)} value={selectedYear}>
-              {years.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-          </label>
-          <label className="min-w-0">
-            <span className="field-label">Métrica</span>
-            <select aria-readonly="true" className="field-select" disabled value="geral">
-              <option value="geral">Notas Gerais · IBID e CLP</option>
-            </select>
-          </label>
+          {filterFields}
         </div>
       </section>
 
@@ -523,21 +743,41 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
         <TopStatesCard data={data.clp} />
       </section>
 
-      <div className="dashboard-results-panel comparison-results-panel">
-        <div className="comparison-chart-grid">
+      <div className="dashboard-results-panel">
+        <div className="dashboard-visual-grid">
+          <div className="dashboard-visual-charts">
           <section className="series-chart min-w-0">
             <h2 className="section-title">Série Histórica {period ? `(${period})` : ''}</h2>
-            <p className="section-description">Evolução das notas gerais de {stateName}, convertidas para uma escala comum de 0 a 100.</p>
+            <p className="section-description">Evolução das notas gerais de {stateName}. IBID no eixo esquerdo (0–1) e CLP no eixo direito (0–100).</p>
             <div className="chart-canvas min-w-0">
               <ResponsiveContainer height="100%" width="100%">
                 <LineChart accessibilityLayer data={chartData} margin={{ left: 0, right: 8, top: 8 }}>
                   <CartesianGrid stroke="rgba(191,208,224,.62)" vertical={false} />
                   <XAxis axisLine={{ stroke: '#bfbfbf' }} dataKey="year" tick={{ fill: '#54555a', fontSize: 12 }} tickMargin={10} tickLine={false} />
-                  <YAxis axisLine={false} domain={[0, 100]} tick={{ fill: '#54555a', fontSize: 12 }} tickLine={false} width={34} />
+                  <YAxis
+                    axisLine={false}
+                    domain={[0, 100]}
+                    tick={{ fill: colors.ibid, fontSize: 12 }}
+                    tickFormatter={(value: number) => (value / 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
+                    tickLine={false}
+                    ticks={[0, 20, 40, 60, 80, 100]}
+                    width={34}
+                    yAxisId="score"
+                  />
+                  <YAxis
+                    axisLine={false}
+                    domain={[0, 100]}
+                    orientation="right"
+                    tick={{ fill: colors.clp, fontSize: 12 }}
+                    tickLine={false}
+                    ticks={[0, 20, 40, 60, 80, 100]}
+                    width={34}
+                    yAxisId="clp-reference"
+                  />
                   <Tooltip content={ChartTooltip} cursor={{ stroke: '#bfd0e0', strokeDasharray: '3 3' }} />
                   <Legend iconSize={17} iconType="plainline" wrapperStyle={{ color: '#404040', fontSize: 12, paddingTop: 20 }} />
-                  <Line connectNulls dataKey="ibid" dot={false} isAnimationActive={false} name="IBID" stroke={colors.ibid} strokeWidth={3} type="monotone" />
-                  <Line connectNulls dataKey="clp" dot={false} isAnimationActive={false} name="CLP" stroke={colors.clp} strokeWidth={3} type="monotone" />
+                  <Line connectNulls dataKey="ibidPlot" dot={{ fill: colors.ibid, r: 3, stroke: '#fff', strokeWidth: 1 }} isAnimationActive={false} name="IBID" stroke={colors.ibid} strokeWidth={3} type="monotone" yAxisId="score" />
+                  <Line connectNulls dataKey="clpPlot" dot={{ fill: colors.clp, r: 3, stroke: '#fff', strokeWidth: 1 }} isAnimationActive={false} name="CLP" stroke={colors.clp} strokeWidth={3} type="monotone" yAxisId="clp-reference" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -562,24 +802,47 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
             </div>
             <p className="source-line">Quanto menor a posição, melhor a colocação no ranking nacional.</p>
           </section>
-        </div>
+          </div>
 
-        <section className="comparison-bars-section">
+          <div className="comparison-map min-w-0">
+            <div className="comparison-map-toggle" role="group" aria-label="Estudo exibido no mapa">
+              {(['ibid', 'clp'] as const).map((study) => (
+                <button aria-pressed={mapStudy === study} key={study} onClick={() => setMapStudy(study)} type="button">
+                  {study.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <BrazilMap
+              decimals={mapStudy === 'ibid' ? 3 : 2}
+              kind={mapData.kind}
+              metricLabel="Nota Geral"
+              onSelect={(code) => updateFilter('primary', code)}
+              ranking={mapData.stateRanking ?? []}
+              selectedCode={selectedState}
+              tooltipLines={mapTooltipLines}
+              year={selectedYear}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="dashboard-results-panel">
+        <section className="min-w-0">
           <h2 className="section-title">Comparativo de posição e nota entre os estudos</h2>
-          <p className="section-description">{stateName} · Nota geral e posição no ranking por ano</p>
+          <p className="section-description">{stateName} · Nota geral e posição no ranking por ano. As barras usam uma escala comum; os rótulos mostram a nota original (IBID 0–1, CLP 0–100).</p>
           <p className="state-comparison-scroll-hint">Deslize para ver todos os anos</p>
           <div className="state-comparison-scroll" role="region" aria-label="Comparação anual entre IBID e CLP" tabIndex={0}>
             <div className="state-comparison-canvas">
               <ResponsiveContainer height="100%" width="100%">
-                <BarChart accessibilityLayer barCategoryGap="24%" data={chartData} margin={{ left: 0, right: 8, top: 42 }}>
+                <BarChart accessibilityLayer barCategoryGap="20%" barGap={12} data={chartData} margin={{ left: 0, right: 8, top: 42 }}>
                   <XAxis axisLine={{ stroke: '#bfbfbf' }} dataKey="year" tick={{ fill: '#54555a', fontSize: 12 }} tickMargin={10} tickLine={false} />
                   <YAxis domain={[0, 100]} hide />
                   <Tooltip content={ChartTooltip} cursor={{ fill: '#eef6ff' }} />
                   <Legend iconSize={17} iconType="plainline" wrapperStyle={{ color: '#404040', fontSize: 12, paddingTop: 20 }} />
-                  <Bar dataKey="ibid" fill={colors.ibid} isAnimationActive={false} maxBarSize={28} name="IBID">
+                  <Bar dataKey="ibidPlot" fill={colors.ibid} isAnimationActive={false} maxBarSize={28} name="IBID">
                     <LabelList content={<PositionLabel />} dataKey="ibidLabel" />
                   </Bar>
-                  <Bar dataKey="clp" fill={colors.clp} isAnimationActive={false} maxBarSize={28} name="CLP">
+                  <Bar dataKey="clpPlot" fill={colors.clp} isAnimationActive={false} maxBarSize={28} name="CLP">
                     <LabelList content={<PositionLabel />} dataKey="clpLabel" />
                   </Bar>
                 </BarChart>
@@ -588,7 +851,17 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
           </div>
           <p className="source-line">Fontes: {data.ibid.meta.source} · {data.clp.meta.source}</p>
         </section>
+      </div>
 
+      <div className="dashboard-results-panel">
+        <AgreementScatter data={data} onSelect={(code) => updateFilter('primary', code)} selectedState={selectedState} stateName={stateName} year={selectedYear} />
+      </div>
+
+      <div className="dashboard-results-panel">
+        <PillarDumbbell data={data} stateName={stateName} />
+      </div>
+
+      <div className="dashboard-results-panel">
         <ComparisonTable data={data} stateName={stateName} />
       </div>
     </main>

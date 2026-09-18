@@ -54,6 +54,8 @@ interface ChoroplethMapProps {
   selectedCode?: string
   title: string
   titleId: string
+  /** Substitui a nota e a posição exibidas no tooltip. */
+  tooltipLines?: (item: RankingItem) => string[]
   viewBox: string
 }
 
@@ -72,6 +74,7 @@ export function ChoroplethMap({
   selectedCode,
   title,
   titleId,
+  tooltipLines,
   viewBox,
 }: ChoroplethMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -160,7 +163,9 @@ export function ChoroplethMap({
                 {tooltipEntry.item?.label ?? tooltipEntry.location.name}
                 {tooltipEntry.item && tooltipEntry.item.name !== tooltipEntry.item.label ? ` (${tooltipEntry.item.name})` : ''}
               </span>
-              {tooltipEntry.item && !tooltipEntry.item.wasNull ? (
+              {tooltipEntry.item && tooltipLines ? (
+                tooltipLines(tooltipEntry.item).map((line) => <strong key={line}>{line}</strong>)
+              ) : tooltipEntry.item && !tooltipEntry.item.wasNull ? (
                 <>
                   <strong>{formatValue(tooltipEntry.item.value)}</strong>
                   {positionText(tooltipEntry.item).map((line) => <strong key={line}>{line}</strong>)}
