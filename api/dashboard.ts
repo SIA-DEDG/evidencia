@@ -37,13 +37,6 @@ export default async function handler(request: IncomingMessage, response: Server
       return
     }
 
-    const url = new URL(request.url ?? '/', 'http://localhost')
-    const kind = url.searchParams.get('kind') as DashboardKind | null
-    if (!kind || !dashboardKinds.has(kind)) {
-      json(response, 400, { error: 'Painel inválido.' })
-      return
-    }
-
     pool ??= new pg.Pool({
       connectionString,
       max: 1,
@@ -51,6 +44,18 @@ export default async function handler(request: IncomingMessage, response: Server
       connectionTimeoutMillis: 10_000,
       ssl: { rejectUnauthorized: false },
     })
+
+    const url = new URL(request.url ?? '/', 'http://localhost')
+    // A página inicial pede só a data da última carga e o período dos dados.
+    if (url.searchParams.get('kind') === 'meta') {
+      json(response, 200, await new DashboardService(pool).getMeta())
+      return
+    }
+    const kind = url.searchParams.get('kind') as DashboardKind | null
+    if (!kind || !dashboardKinds.has(kind)) {
+      json(response, 400, { error: 'Painel inválido.' })
+      return
+    }
 
     const values = Object.fromEntries(url.searchParams.entries())
     url.searchParams.sort()

@@ -2,6 +2,7 @@ import pg from 'pg'
 import type {
   DashboardDataset,
   DashboardKind,
+  DataMeta,
   DetailRow,
   FilterDefinition,
   HighlightGroup,
@@ -665,6 +666,29 @@ function buildDetails(
 
 export class DashboardService {
   constructor(private readonly pool: pg.Pool) {}
+
+  async getMeta(): Promise<DataMeta> {
+    const result = await this.pool.query<{ updated_at: string | null; first_year: number | null; last_year: number | null }>(`
+      with cargas as (
+        select af.edicao_id, ci.concluida_em
+        from carga_importacao ci
+        join arquivo_fonte af on af.id = ci.arquivo_fonte_id and af.ativo
+        where ci.status = 'SUCESSO'
+      )
+      select
+        (select max(concluida_em) from cargas)::text as updated_at,
+        min(rr.ano_referencia) as first_year,
+        max(rr.ano_referencia) as last_year
+      from resultado_ranking rr
+      where rr.edicao_id in (select edicao_id from cargas)
+    `)
+    const row = result.rows[0]
+    if (!row?.updated_at || !row.first_year || !row.last_year) throw new Error('Não há carga concluída no banco.')
+    return {
+      updatedAt: new Date(row.updated_at).toISOString(),
+      dataPeriod: row.first_year === row.last_year ? String(row.first_year) : `${row.first_year}–${row.last_year}`,
+    }
+  }
 
   async getDashboard(kind: DashboardKind, values: QueryValues): Promise<DashboardDataset> {
     const config = kindConfig[kind]

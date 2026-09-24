@@ -1,8 +1,9 @@
-import type { DashboardDataset, DashboardKind } from '../types/dashboard'
+import type { DashboardDataset, DashboardKind, DataMeta } from '../types/dashboard'
 
 /** Contrato da API agregada que mantém as credenciais PostgreSQL no servidor. */
 export interface DashboardRepository {
   getDashboard(kind: DashboardKind, filters?: Record<string, string>): Promise<DashboardDataset>
+  getMeta(): Promise<DataMeta>
 }
 
 class ApiDashboardRepository implements DashboardRepository {
@@ -27,6 +28,15 @@ class ApiDashboardRepository implements DashboardRepository {
       throw new Error('error' in body && body.error ? body.error : 'Não foi possível carregar os dados do painel.')
     }
     return body as DashboardDataset
+  }
+
+  async getMeta() {
+    const response = await fetch('/api/dashboard?kind=meta')
+    const body = await response.json() as DataMeta | { error?: string }
+    if (!response.ok || !('updatedAt' in body)) {
+      throw new Error('error' in body && body.error ? body.error : 'Não foi possível consultar a última atualização.')
+    }
+    return body
   }
 }
 

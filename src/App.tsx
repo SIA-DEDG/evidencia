@@ -7,7 +7,7 @@ import { LoadingState } from './components/LoadingState'
 import { dashboardRepository } from './data/dashboardRepository'
 import { pillarRelation } from './data/studyRelations'
 import { detectDashboardKind, interpretDashboardSearch, normalizeSearchText } from './data/dashboardSearch'
-import type { ComparisonDataset, DashboardDataset } from './types/dashboard'
+import type { ComparisonDataset, DashboardDataset, DataMeta } from './types/dashboard'
 
 const allowedPages: PageId[] = ['sobre', 'ibid', 'clp-estados', 'clp-municipios', 'comparativo']
 const fontScales = [0.9, 1, 1.1, 1.2]
@@ -31,11 +31,18 @@ export default function App() {
   const [page, setPage] = useState<PageId>(pageFromHash)
   const [dashboard, setDashboard] = useState<DashboardDataset | null>(null)
   const [comparison, setComparison] = useState<ComparisonDataset | null>(null)
+  const [siteMeta, setSiteMeta] = useState<DataMeta | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fontScale, setFontScale] = useState(initialFontScale)
   const requestSequence = useRef(0)
   const skipNextPageLoad = useRef(false)
+
+  useEffect(() => {
+    dashboardRepository.getMeta().then(setSiteMeta, (reason: unknown) => {
+      console.error('Não foi possível consultar a última atualização dos dados.', reason)
+    })
+  }, [])
 
   useEffect(() => {
     const syncHash = () => setPage(pageFromHash())
@@ -208,7 +215,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-canvas text-ink transition-colors dark:bg-slate-950 dark:text-slate-100">
       <HeaderIntegration
-        dataMeta={dashboard?.meta ?? comparison?.meta}
+        dataMeta={dashboard?.meta ?? comparison?.meta ?? (page === 'sobre' ? siteMeta ?? undefined : undefined)}
         fontScale={fontScale}
         onFontScaleChange={setFontScale}
         onNavigate={navigate}

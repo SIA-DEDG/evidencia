@@ -154,6 +154,12 @@ export interface DashboardDataset {
   details: DetailRow[]
 }
 
+/** Última carga e período cobertos por todas as pesquisas, exibidos na página inicial. */
+export interface DataMeta {
+  updatedAt: string
+  dataPeriod: string
+}
+
 export interface ComparisonDataset {
   ibid: DashboardDataset
   clp: DashboardDataset

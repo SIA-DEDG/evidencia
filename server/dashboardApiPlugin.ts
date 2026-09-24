@@ -35,13 +35,6 @@ export function dashboardApiPlugin(connectionString: string | undefined): Plugin
       return
     }
 
-    const url = new URL(request.url ?? '/', 'http://localhost')
-    const kind = url.searchParams.get('kind') as DashboardKind | null
-    if (!kind || !dashboardKinds.has(kind)) {
-      json(response, 400, { error: 'Painel inválido.' })
-      return
-    }
-
     pool ??= new pg.Pool({
       connectionString,
       max: 5,
@@ -49,6 +42,24 @@ export function dashboardApiPlugin(connectionString: string | undefined): Plugin
       ssl: { rejectUnauthorized: false },
     })
     const service = new DashboardService(pool)
+
+    const url = new URL(request.url ?? '/', 'http://localhost')
+    // A página inicial pede só a data da última carga e o período dos dados.
+    if (url.searchParams.get('kind') === 'meta') {
+      service
+        .getMeta()
+        .then((meta) => json(response, 200, meta))
+        .catch((error: unknown) => {
+          console.error('Falha ao consultar a última atualização:', error)
+          json(response, 500, { error: error instanceof Error ? error.message : 'Falha ao consultar o banco.' })
+        })
+      return
+    }
+    const kind = url.searchParams.get('kind') as DashboardKind | null
+    if (!kind || !dashboardKinds.has(kind)) {
+      json(response, 400, { error: 'Painel inválido.' })
+      return
+    }
     const values = Object.fromEntries(url.searchParams.entries())
     url.searchParams.sort()
     const cacheKey = url.searchParams.toString()

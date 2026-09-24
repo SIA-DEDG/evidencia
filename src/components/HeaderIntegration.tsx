@@ -26,6 +26,15 @@ const navigationItems: readonly HeaderNavigationItem[] = [
   { id: 'comparativo', label: 'Comparativo' },
 ]
 
+/** Ex.: "15/09/2026, 10:05 horas", no fuso de quem acessa. */
+function formatUpdatedAt(value: string | Date) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const day = date.toLocaleDateString('pt-BR')
+  const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  return `${day}, ${time} horas`
+}
+
 export function HeaderIntegration({
   page,
   fontScale,
@@ -70,7 +79,10 @@ export function HeaderIntegration({
       />
       {dataMeta && (
         <div className="update-strip">
-          <span><CalendarClock aria-hidden="true" size={18} />Última atualização desta página: {Number.isNaN(new Date(dataMeta.updatedAt).getTime()) ? String(dataMeta.updatedAt) : new Date(dataMeta.updatedAt).toLocaleString('pt-BR')}</span>
+          <span>
+            <CalendarClock aria-hidden="true" size={18} />
+            Última atualização dessa página feita em {formatUpdatedAt(dataMeta.updatedAt)}
+          </span>
           <span>Período dos dados: {dataMeta.dataPeriod}</span>
         </div>
       )}
