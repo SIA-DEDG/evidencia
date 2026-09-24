@@ -664,6 +664,19 @@ function buildDetails(
   return roots.map((root, index) => descend(root, [index + 1]))
 }
 
+// Territórios, métricas e estruturas só mudam numa nova carga; guardá-los evita baixá-los do banco a cada painel.
+const referenceCacheTtlMs = 10 * 60_000
+const referenceCache = new Map<string, { expiresAt: number; value: Promise<unknown> }>()
+
+function cachedReference<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const entry = referenceCache.get(key)
+  if (entry && entry.expiresAt > Date.now()) return entry.value as Promise<T>
+  const value = load()
+  referenceCache.set(key, { expiresAt: Date.now() + referenceCacheTtlMs, value })
+  value.catch(() => referenceCache.delete(key))
+  return value
+}
+
 export class DashboardService {
   constructor(private readonly pool: pg.Pool) {}
 
@@ -714,13 +727,13 @@ export class DashboardService {
       if (!latestEdition) throw new Error(`Não há carga concluída para ${config.research}.`)
       const editionIds = editions.map((row) => row.id)
 
-      const territoryResult = await client.query<TerritoryRow>(`
+      const allTerritories = await cachedReference('territorios', async () => (await client.query<TerritoryRow>(`
         select t.id, t.codigo, t.sigla, t.nome, t.tipo, t.parent_id
         from territorio t
         where t.tipo in ('REGIAO', 'UF', 'MUNICIPIO')
         order by t.nome
-      `)
-      const allTerritories = territoryResult.rows
+      `)).rows)
+      const territoryById = new Map(allTerritories.map((row) => [row.id, row]))
       const regions = allTerritories.filter((row) => row.tipo === 'REGIAO')
       const states = allTerritories.filter((row) => row.tipo === 'UF')
       const municipalities = allTerritories.filter((row) => row.tipo === 'MUNICIPIO')
@@ -738,7 +751,7 @@ export class DashboardService {
       if (!primary) throw new Error('Nenhum território disponível para o painel.')
       const comparison = availableEntities.find((row) => row.codigo === values.comparison && row.id !== primary.id)
 
-      const metricResult = await client.query<ComponentRow>(`
+      const metricRows = await cachedReference(`metricas:${config.research}:${editionIds.join(',')}`, async () => (await client.query<ComponentRow>(`
         select distinct on (c.id) c.id, c.codigo, c.tipo, ce.nome,
           null::uuid as parent_id, ce.ordem::integer as ordem_exibicao,
           ce.descricao, ce.fonte, ce.unidade_medida
@@ -749,16 +762,17 @@ export class DashboardService {
         join carga_importacao ci on ci.id = ce.carga_importacao_id and ci.status = 'SUCESSO'
         where p.codigo = $1 and c.tipo = any($3::varchar[])
         order by c.id, e.ano desc, ci.concluida_em desc
-      `, [config.research, editionIds, config.metricTypes])
-      const metrics = metricResult.rows.sort((a, b) => {
+      `, [config.research, editionIds, config.metricTypes])).rows)
+      const metrics = [...metricRows].sort((a, b) => {
         const order = config.metricTypes.indexOf(a.tipo as never) - config.metricTypes.indexOf(b.tipo as never)
         return order || (a.ordem_exibicao ?? 9999) - (b.ordem_exibicao ?? 9999) || a.nome.localeCompare(b.nome, 'pt-BR')
       })
       const metric = metrics.find((row) => row.codigo === values.metric) ?? metrics.find((row) => row.tipo === 'GERAL') ?? metrics[0]
       if (!metric) throw new Error('Nenhum indicador disponível para o painel.')
 
-      const allResultsQuery = await client.query<ResultRow & { edicao_id: string }>(`
-        select t.id, t.codigo, t.sigla, t.nome, t.tipo, t.parent_id, rr.edicao_id,
+      // Só as colunas do resultado: os dados do território vêm da lista já carregada.
+      const allResultsQuery = await client.query<{ id: string; edicao_id: string; ano_referencia: number; nota: number | null; posicao: number | null }>(`
+        select rr.territorio_id as id, rr.edicao_id,
           rr.ano_referencia, rr.nota_normalizada::float8 as nota, rr.posicao
         from resultado_ranking rr
         join territorio t on t.id = rr.territorio_id
@@ -778,7 +792,8 @@ export class DashboardService {
       // a edição daquele próprio ano, ou, se não houver, a mais recente que traga o ano.
       const editionYearById = new Map(editions.map((row) => [row.id, row.ano]))
       const editionIdByYear = new Map<number, string>()
-      for (const row of allResultsQuery.rows) {
+      const resultRows = allResultsQuery.rows.map((row) => ({ ...territoryById.get(row.id)!, ...row }))
+      for (const row of resultRows) {
         if (row.tipo !== config.entityType) continue
         const chosen = editionIdByYear.get(row.ano_referencia)
         const chosenYear = chosen ? editionYearById.get(chosen) : undefined
@@ -786,7 +801,7 @@ export class DashboardService {
           editionIdByYear.set(row.ano_referencia, row.edicao_id)
         }
       }
-      const allResults = allResultsQuery.rows
+      const allResults: ResultRow[] = resultRows
         .filter((row) => editionIdByYear.get(row.ano_referencia) === row.edicao_id)
         .map(({ edicao_id: _editionId, ...row }) => ({ ...row, nota: numberValue(row.nota) }))
       // Alguns componentes (ex.: pilares do IBID) trazem a posição de um único ano; nos demais,
@@ -875,7 +890,7 @@ export class DashboardService {
       let highlights: HighlightGroup[] = []
       let insightGroups: InsightGroup[] = []
       if (structureId) {
-        const componentResult = await client.query<ComponentRow>(`
+        const componentRows = await cachedReference(`componentes:${structureId}`, async () => (await client.query<ComponentRow>(`
           select c.id, c.codigo, c.tipo, ce.nome, ec.parent_componente_id as parent_id,
             ec.ordem_exibicao, ce.descricao, ce.fonte, ce.unidade_medida,
             -- Algumas cargas da mesma edição não trazem o ano; usa o de outra carga quando houver.
@@ -890,8 +905,8 @@ export class DashboardService {
             and ce.edicao_id = e.edicao_id and ce.carga_importacao_id = e.carga_importacao_id
           where ec.estrutura_id = $1
           order by ec.ordem_exibicao nulls last, c.codigo
-        `, [structureId])
-        components = componentResult.rows
+        `, [structureId])).rows)
+        components = componentRows.map((row) => ({ ...row }))
         const componentIds = components.map((component) => component.id)
         const detailTerritoryIds = new Set(peerIds)
         detailTerritoryIds.add(primary.id)
