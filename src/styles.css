@@ -67,6 +67,7 @@
     position: relative;
     height: 400px;
     overflow: hidden;
+    background: #e1edfa;
     font-family: Montserrat, sans-serif;
   }
   .home-hero-background {

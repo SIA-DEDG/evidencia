@@ -48,9 +48,49 @@ const heroTileRows: Array<Array<HeroTileTone | null>> = [
   ['base', 'base', 'base', 'dark', 'base', 'base', 'bright', 'base', 'base', 'base', 'base', 'base', null, null, 'fade-base'],
 ]
 
-const heroTiles = heroTileRows.flatMap((row, rowIndex) => row.flatMap((tone, columnIndex) => (
-  tone ? [{ columnIndex, rowIndex, tone }] : []
-)))
+function getHeroExtensionTone(columnIndex: number, rowIndex: number): HeroTileTone {
+  const variation = Math.abs((columnIndex * 7) + (rowIndex * 11) + (columnIndex * rowIndex * 3)) % 17
+
+  if (variation === 0 || variation === 11) return 'bright'
+  if (variation === 3 || variation === 8 || variation === 14) return 'dark'
+  if (variation === 5 || variation === 15) return 'mid'
+  return 'base'
+}
+
+const heroLeftExtensionTiles = Array.from({ length: 40 }, (_, columnOffset) => {
+  const columnIndex = columnOffset - 40
+  return Array.from({ length: 5 }, (_, rowIndex) => ({
+    columnIndex,
+    rowIndex,
+    tone: getHeroExtensionTone(columnIndex, rowIndex),
+  }))
+}).flat()
+
+const heroTiles = [
+  ...heroLeftExtensionTiles,
+  ...heroTileRows.flatMap((row, rowIndex) => row.flatMap((tone, columnIndex) => (
+    tone ? [{ columnIndex, rowIndex, tone }] : []
+  ))),
+]
+
+type AssistantTileTone = 'base' | 'dark' | 'faint'
+
+const assistantTileColors: Record<AssistantTileTone, string> = {
+  base: 'rgba(3, 78, 162, .8)',
+  dark: 'rgba(6, 63, 125, .7)',
+  faint: 'rgba(2, 62, 130, .2)',
+}
+
+const assistantExtensionTiles = [
+  ...Array.from({ length: 40 }, (_, index) => index - 40),
+  ...Array.from({ length: 40 }, (_, index) => index + 18),
+].flatMap((columnIndex) => Array.from({ length: 3 }).flatMap((_, rowIndex) => {
+  const variation = Math.abs((columnIndex * 5) + (rowIndex * 7) + (columnIndex * rowIndex * 3)) % 11
+  if (variation > 2) return []
+
+  const tone: AssistantTileTone = variation === 0 ? 'base' : variation === 1 ? 'dark' : 'faint'
+  return [{ columnIndex, rowIndex, tone }]
+}))
 
 function Definition({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -351,6 +391,19 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
       <section className="home-assistant" aria-labelledby="assistant-title" data-node-id="2474:3529">
         <div aria-hidden="true" className="home-assistant-grid">
           <span /><span /><span /><span /><span /><span /><span /><span />
+          {assistantExtensionTiles.map(({ columnIndex, rowIndex, tone }) => (
+            <span
+              className="home-assistant-extension-tile"
+              key={`${columnIndex}-${rowIndex}`}
+              style={{
+                backgroundColor: assistantTileColors[tone],
+                borderColor: tone === 'dark' ? 'rgba(222, 240, 255, .35)' : 'rgba(222, 230, 255, .35)',
+                height: rowIndex === 2 ? 65 : 80,
+                left: `calc(50% - 720px + ${columnIndex * 80}px)`,
+                top: rowIndex * 80,
+              }}
+            />
+          ))}
         </div>
         <div className="home-assistant-inner">
           <div className="home-assistant-copy">
