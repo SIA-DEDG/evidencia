@@ -1,7 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface AboutPageProps {
+  chatOpen: boolean
+  onAssistantVisibilityChange: (visible: boolean) => void
   onNavigate: (page: 'ibid' | 'clp-estados') => void
+  onOpenChat: (trigger: HTMLButtonElement) => void
 }
 
 const ibidPillars = [
@@ -101,9 +104,21 @@ function Definition({ label, children }: { label: string; children: React.ReactN
   )
 }
 
-export function AboutPage({ onNavigate }: AboutPageProps) {
+export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, onOpenChat }: AboutPageProps) {
   const studiesRef = useRef<HTMLDivElement>(null)
   const [activeStudy, setActiveStudy] = useState(0)
+  const assistantRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const section = assistantRef.current
+    if (!section) return
+    const observer = new IntersectionObserver(([entry]) => onAssistantVisibilityChange(entry.isIntersecting))
+    observer.observe(section)
+    return () => {
+      observer.disconnect()
+      onAssistantVisibilityChange(false)
+    }
+  }, [onAssistantVisibilityChange])
 
   const scrollToStudy = (index: number) => {
     const carousel = studiesRef.current
@@ -125,12 +140,6 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
     }, { index: 0, distance: Number.POSITIVE_INFINITY })
 
     setActiveStudy(closestStudy.index)
-  }
-
-  const focusAssistant = () => {
-    const search = document.querySelector<HTMLInputElement>('input[type="search"]')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-    window.setTimeout(() => search?.focus(), 350)
   }
 
   return (
@@ -388,7 +397,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section className="home-assistant" aria-labelledby="assistant-title" data-node-id="2474:3529">
+      <section className="home-assistant" aria-labelledby="assistant-title" data-node-id="2474:3529" ref={assistantRef}>
         <div aria-hidden="true" className="home-assistant-grid">
           <span /><span /><span /><span /><span /><span /><span /><span />
           {assistantExtensionTiles.map(({ columnIndex, rowIndex, tone }) => (
@@ -418,7 +427,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                 entre estados e regiões, pilares, dimensões e indicadores do IBID e CLP em linguagem simples
               </p>
             </div>
-            <button onClick={focusAssistant} type="button">
+            <button aria-controls="edson-chat" aria-expanded={chatOpen} aria-haspopup="dialog" onClick={(event) => onOpenChat(event.currentTarget)} type="button">
               Converse com o assistente Edson
               <img alt="" aria-hidden="true" height="16" src="/assets/assistant-arrow.svg" width="16" />
             </button>

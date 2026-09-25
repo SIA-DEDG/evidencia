@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AboutPage } from './components/AboutPage'
 import { ComparisonPage } from './components/ComparisonPage'
 import { DashboardPage } from './components/DashboardPage'
+import { EdsonChat } from './components/EdsonChat'
 import { HeaderIntegration, type PageId } from './components/HeaderIntegration'
 import { LoadingState } from './components/LoadingState'
 import { dashboardRepository } from './data/dashboardRepository'
@@ -37,6 +38,27 @@ export default function App() {
   const [fontScale, setFontScale] = useState(initialFontScale)
   const requestSequence = useRef(0)
   const skipNextPageLoad = useRef(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [homeAssistantVisible, setHomeAssistantVisible] = useState(false)
+  const chatTriggerRef = useRef<HTMLButtonElement | null>(null)
+
+  const openChat = useCallback((trigger: HTMLButtonElement) => {
+    chatTriggerRef.current = trigger
+    setChatOpen(true)
+  }, [])
+
+  const closeChat = useCallback(() => {
+    setChatOpen(false)
+    requestAnimationFrame(() => {
+      const triggers = [chatTriggerRef.current, ...document.querySelectorAll<HTMLButtonElement>('[aria-controls="edson-chat"]')]
+      const visibleTrigger = triggers.find((trigger) => {
+        if (!trigger?.isConnected || trigger.hidden) return false
+        const rect = trigger.getBoundingClientRect()
+        return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight
+      })
+      visibleTrigger?.focus({ preventScroll: true })
+    })
+  }, [])
 
   useEffect(() => {
     dashboardRepository.getMeta().then(setSiteMeta, (reason: unknown) => {
@@ -233,7 +255,14 @@ export default function App() {
           </div>
         </div>
       )}
-      {page === 'sobre' && <AboutPage onNavigate={navigate} />}
+      {page === 'sobre' && (
+        <AboutPage
+          chatOpen={chatOpen}
+          onAssistantVisibilityChange={setHomeAssistantVisible}
+          onNavigate={navigate}
+          onOpenChat={openChat}
+        />
+      )}
       {comparison && page === 'comparativo' && (
         <div className="relative">
           {loading && <LoadingState label="Atualizando comparação" overlay />}
@@ -257,6 +286,19 @@ export default function App() {
           © 2026 Secretaria de Inteligência Artificial, Economia Digital, Ciência, Tecnologia e Inovação — SIA
         </footer>
       )}
+      <button
+        aria-controls="edson-chat"
+        aria-expanded={chatOpen}
+        aria-haspopup="dialog"
+        aria-label="Abrir chat do Edson"
+        className="edson-chat-launcher"
+        hidden={chatOpen || (page === 'sobre' && homeAssistantVisible)}
+        onClick={(event) => openChat(event.currentTarget)}
+        type="button"
+      >
+        <img alt="" aria-hidden="true" height={48} src="/assets/edson-empty-state.svg" width={48} />
+      </button>
+      <EdsonChat onClose={closeChat} open={chatOpen} />
     </div>
   )
 }
