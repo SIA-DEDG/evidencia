@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Info } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { formatIndicatorUnit } from '../data/indicatorUnit'
+import { IbidDataInfo } from './IbidDataInfo'
 import type { DashboardKind, DetailRow } from '../types/dashboard'
 
 interface DetailTableProps {
@@ -214,7 +215,10 @@ export function DetailTable({
     <section className="detail-table-section">
       <div className="detail-table-heading">
         <div>
-          <h2 className="section-title">Tabela Detalhada - {primaryLabel}{comparisonEnabled ? ` × ${comparisonLabel}` : ''}</h2>
+          <div className="detail-table-title">
+            <h2 className="section-title">Tabela Detalhada - {primaryLabel}{comparisonEnabled ? ` × ${comparisonLabel}` : ''}</h2>
+            {kind === 'ibid' && <IbidDataInfo />}
+          </div>
           <p className="section-description">{hierarchyLabel}</p>
         </div>
         {expandableIds.length > 0 && (
