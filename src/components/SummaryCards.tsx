@@ -13,18 +13,18 @@ function RankingCard({ title, metric, ranking, decimals }: { title: string; metr
 
   return (
     <article className="summary-card ranking-summary">
-      <p className="eyebrow truncate">{title} · {metric}</p>
+      <p className="eyebrow">{title} · {metric}</p>
       {first && (
-        <div className="mt-[10px] flex items-baseline gap-1">
-          <strong className="text-base leading-none text-brand-700 dark:text-blue-200">{first.position}º {first.name}</strong>
-          <span className="text-[10px] text-muted dark:text-slate-400">nota {first.value.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}</span>
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <strong className="min-w-0 break-words text-lg leading-snug text-brand-700 dark:text-blue-200">{first.position}º {first.name}</strong>
+          <span className="text-sm text-muted dark:text-slate-400">nota {first.value.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}</span>
         </div>
       )}
-      <div className="mt-[10px] grid grid-flow-col grid-cols-2 grid-rows-2 gap-x-4 gap-y-[6px]">
+      <div className="mt-3 grid grid-flow-col grid-cols-2 grid-rows-2 gap-x-4 gap-y-2">
         {remaining.map((item) => (
-          <div className="flex items-baseline gap-1" key={item.name}>
-            <strong className="text-xs leading-none text-brand-700 dark:text-blue-200">{item.position}º {item.name}</strong>
-            <span className="text-[9px] text-muted dark:text-slate-400">{item.value.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}</span>
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1" key={item.name}>
+            <strong className="min-w-0 break-words text-base leading-snug text-brand-700 dark:text-blue-200">{item.position}º {item.name}</strong>
+            <span className="text-sm text-muted dark:text-slate-400">{item.value.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}</span>
           </div>
         ))}
       </div>
@@ -39,11 +39,11 @@ export function SummaryCards({ summary, national, regional, kind, labels }: Summ
       {summary.map((item) => (
         <article className={item.emphasis === 'primary' ? 'summary-card summary-card-primary' : 'summary-card'} key={item.eyebrow}>
           <p className="eyebrow">{item.eyebrow}</p>
-          <h3 className="mt-1 truncate text-base font-semibold text-brand-700 dark:text-blue-200">{item.title}</h3>
-          <p className="mt-1 truncate text-xs text-muted dark:text-slate-400">{item.metric}</p>
-          <div className="mt-[10px] flex items-end gap-[10px]">
+          <h3 className="mt-1 text-lg font-semibold text-brand-700 dark:text-blue-200">{item.title}</h3>
+          <p className="mt-1 text-sm text-muted dark:text-slate-400">{item.metric}</p>
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
             <strong className="text-[20px] leading-6 text-brand-700 dark:text-blue-200">{item.rank}</strong>
-            <span className="text-[10px] text-muted dark:text-slate-400">{item.note}</span>
+            <span className="text-sm text-muted dark:text-slate-400">{item.note}</span>
           </div>
         </article>
       ))}

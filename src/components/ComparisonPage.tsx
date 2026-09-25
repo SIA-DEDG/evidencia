@@ -170,16 +170,16 @@ function StudySummaryCard({ data, label, metricName }: { data: DashboardDataset;
   return (
     <article className="summary-card comparison-summary-card">
       <p className="eyebrow">Estudo</p>
-      <h3 className="truncate text-base font-semibold text-brand-700">{label}</h3>
-      <p className="truncate text-xs text-muted">{metricName} · {label}</p>
+      <h3 className="text-lg font-semibold text-brand-700">{label}</h3>
+      <p className="text-sm text-muted">{metricName} · {label}</p>
       <div className="comparison-summary-stats">
         {stats.map((stat) => (
           <div key={stat.caption}>
             <p className="comparison-rank">
               <strong>{rankLabel(stat.value?.position ?? null, stat.value?.total ?? null).split('/')[0]}</strong>
               {stat.value?.total ? <span>/{stat.value.total}º</span> : null}
-              <small>nota {rawScore(stat.value?.value ?? null, decimals)}</small>
             </p>
+            <p className="comparison-score">nota {rawScore(stat.value?.value ?? null, decimals)}</p>
             <span className="comparison-stat-caption">{stat.caption}</span>
           </div>
         ))}
@@ -192,18 +192,18 @@ function TopStatesCard({ data, metricName }: { data: DashboardDataset; metricNam
   const [first, ...remaining] = data.nationalRanking.slice(0, 5)
   return (
     <article className="summary-card ranking-summary comparison-top-card">
-      <p className="eyebrow truncate">Top 5 Brasil · {metricName} CLP</p>
+      <p className="eyebrow">Top 5 Brasil · {metricName} CLP</p>
       {first && (
-        <div className="mt-[10px] flex items-baseline gap-1">
-          <strong className="text-base leading-none text-brand-700">{first.position}º {first.name}</strong>
-          <span className="text-[10px] text-muted">nota {rawScore(first.value, 2)}</span>
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <strong className="min-w-0 break-words text-lg leading-snug text-brand-700">{first.position}º {first.name}</strong>
+          <span className="text-sm text-muted">nota {rawScore(first.value, 2)}</span>
         </div>
       )}
-      <div className="mt-[10px] grid grid-flow-col grid-cols-2 grid-rows-2 gap-x-4 gap-y-[6px]">
+      <div className="mt-3 grid grid-flow-col grid-cols-2 grid-rows-2 gap-x-4 gap-y-2">
         {remaining.map((item) => (
-          <div className="flex items-baseline gap-1" key={item.code ?? item.name}>
-            <strong className="text-xs leading-none text-brand-700">{item.position}º {item.name}</strong>
-            <span className="text-[9px] text-muted">{rawScore(item.value, 2)}</span>
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1" key={item.code ?? item.name}>
+            <strong className="min-w-0 break-words text-base leading-snug text-brand-700">{item.position}º {item.name}</strong>
+            <span className="text-sm text-muted">{rawScore(item.value, 2)}</span>
           </div>
         ))}
       </div>
