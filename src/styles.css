@@ -959,6 +959,19 @@
   .highlight-badge { @apply shrink-0 self-center text-base font-bold; }
   .highlights-toggle { @apply ml-auto flex items-center gap-2 border-x-0 border-b border-t-0 bg-transparent px-0 pb-0.5 text-sm transition-opacity hover:opacity-75; border-color: var(--dashboard-accent); color: var(--dashboard-accent); }
   .highlights-toggle img { @apply transition-transform; }
+  .comparison-highlights .highlights-heading-copy { flex-basis: 420px; }
+  .comparison-highlights .highlight-macro-toggle { flex-wrap: wrap; }
+  .comparison-highlights .highlight-macro-heading { flex: 1 1 260px; }
+  .comparison-highlights .highlight-macro-action { margin-left: auto; }
+  .comparison-highlight-columns { @apply grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2; }
+  .comparison-highlight-columns-single { @apply md:grid-cols-1; }
+  .comparison-highlight-study { @apply flex min-w-0 flex-col gap-2; }
+  .comparison-highlight-study > h3 { @apply flex items-baseline gap-2 text-sm font-semibold text-[#012e66]; }
+  .comparison-highlight-study > h3 > span { @apply shrink-0 rounded bg-white px-2 py-1 text-xs text-brand-700; }
+  .comparison-highlight-study .highlight-card { @apply flex-1; }
+  .comparison-highlight-note { @apply mt-2 text-xs leading-relaxed text-muted; }
+  .comparison-highlight-indicators { @apply mt-4 border-t border-[#bfd0e0] pt-3; }
+  .comparison-highlight-indicators > .comparison-highlight-pair + .comparison-highlight-pair { @apply mt-4; }
 
   .dashboard-clp-municipios .segment-control .segment-active,
   .dashboard-clp-municipios .detail-table th,

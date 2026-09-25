@@ -20,7 +20,9 @@ import {
 } from 'recharts'
 import { BrazilMap } from './BrazilMap'
 import { FilterDrawer } from './FilterDrawer'
-import { generalMetricValue, pillarRelation, pillarRelationLabel, pillarRelations, type PillarRelation } from '../data/studyRelations'
+import { ComparisonHighlights } from './ComparisonHighlights'
+import { childRows, conceptRows, type ConceptChildRow, type ConceptRow } from '../data/comparisonRelations'
+import { generalMetricValue, pillarRelation, pillarRelationLabel, pillarRelations } from '../data/studyRelations'
 import type { ComparisonDataset, DashboardDataset, DetailRow, RankingItem, SelectOption } from '../types/dashboard'
 
 interface ComparisonPageProps {
@@ -39,23 +41,6 @@ interface ComparisonDatum {
   ibidPosition: number | null
   clpPosition: number | null
   total: number | null
-}
-
-interface ConceptRow {
-  id: string
-  relation: PillarRelation
-  ibid?: DetailRow
-  clp?: DetailRow
-}
-
-interface ConceptChildRow {
-  id: string
-  ibidTitle: string
-  clpTitle: string
-  note: string
-  source: string
-  ibid?: DetailRow
-  clp?: DetailRow
 }
 
 const colors = {
@@ -416,46 +401,8 @@ function PillarDumbbell({ data, stateName }: { data: ComparisonDataset; stateNam
   )
 }
 
-function stripNumber(title: string) {
-  return title.replace(/^\d+(?:\.\d+)*\.?\s*/, '')
-}
-
-function findByName(rows: DetailRow[], name: string) {
-  const target = normalize(name)
-  const queue = [...rows]
-  while (queue.length) {
-    const row = queue.shift()!
-    if (normalize(stripNumber(row.title)) === target) return row
-    if (row.children) queue.push(...row.children)
-  }
-  return undefined
-}
-
 function pairTitle(ibid: string, clp: string) {
   return normalize(ibid) === normalize(clp) ? ibid : `${ibid} × ${clp}`
-}
-
-/** Pares de pilares exibidos: todos nas notas gerais, ou só o par escolhido no filtro. */
-function conceptRows(data: ComparisonDataset): ConceptRow[] {
-  const selected = pillarRelation(data.relation)
-  return (selected ? [selected] : pillarRelations).map((relation) => ({
-    id: relation.id,
-    relation,
-    ibid: findByName(data.ibid.details, relation.ibidPillar),
-    clp: findByName(data.clp.details, relation.clpPillar),
-  }))
-}
-
-function childRows(concept: ConceptRow): ConceptChildRow[] {
-  return concept.relation.indicators.map((indicator) => ({
-    id: `${concept.id}-${normalize(indicator.clp)}`,
-    ibidTitle: indicator.ibid,
-    clpTitle: indicator.clp,
-    note: indicator.note,
-    source: indicator.source,
-    ibid: findByName(concept.ibid ? [concept.ibid] : [], indicator.ibid),
-    clp: findByName(concept.clp ? [concept.clp] : [], indicator.clp),
-  }))
 }
 
 function scoreCell(row?: DetailRow) {
@@ -778,6 +725,8 @@ export function ComparisonPage({ data, onFiltersChange }: ComparisonPageProps) {
           <p>Um estado sob duas óticas — IBID e CLP</p>
         </div>
       </div>
+
+      <ComparisonHighlights data={data} primaryName={stateName} />
 
       <div className="dashboard-filter-intro">
         <h2>Painel comparativo dos estados</h2>
