@@ -660,6 +660,11 @@
   .segment-control button { @apply flex items-center justify-center gap-2.5 rounded-full px-4 text-[#515357] transition dark:text-slate-300; }
   .segment-control button svg { @apply size-[18px]; }
   .segment-control .segment-active { @apply -m-px border border-brand-500 bg-brand-500 font-medium text-white; }
+  .clp-territory-control { border: 0; }
+  .clp-territory-control .segment-active { margin: 0; border: 0; }
+  .clp-territory-icon { display: block; width: 18px; height: 18px; flex-shrink: 0; background: currentColor; mask-repeat: no-repeat; mask-position: center; }
+  .clp-territory-icon-states { mask-image: url('/assets/clp-states.svg'); mask-size: 18px 18px; }
+  .clp-territory-icon-municipalities { mask-image: url('/assets/clp-municipalities.svg'); mask-size: 16.4991px 16.5px; }
   .dashboard-intro { @apply flex flex-wrap items-start justify-between gap-4; }
   .dashboard-intro h1 { line-height: normal; }
   .dashboard-intro p { @apply mt-2.5 text-black; line-height: normal; }

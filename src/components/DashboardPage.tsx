@@ -1,4 +1,3 @@
-import { Building2, MapPinned } from 'lucide-react'
 import { useRef, useState } from 'react'
 import type { DashboardDataset, InsightGroup } from '../types/dashboard'
 import { BrazilMap } from './BrazilMap'
@@ -94,9 +93,9 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
           )}
         </div>
         {isClp && (
-          <div className="segment-control" aria-label="Nível territorial">
-            <button aria-pressed={!municipal} className={!municipal ? 'segment-active' : ''} onClick={() => onClpModeChange?.('estados')} type="button"><MapPinned size={15} /> Estados</button>
-            <button aria-pressed={municipal} className={municipal ? 'segment-active' : ''} onClick={() => onClpModeChange?.('municipios')} type="button"><Building2 size={15} /> Municípios</button>
+          <div className="segment-control clp-territory-control" aria-label="Nível territorial" role="group">
+            <button aria-pressed={!municipal} className={!municipal ? 'segment-active' : ''} onClick={() => onClpModeChange?.('estados')} type="button"><span aria-hidden="true" className="clp-territory-icon clp-territory-icon-states" /> Estados</button>
+            <button aria-pressed={municipal} className={municipal ? 'segment-active' : ''} onClick={() => onClpModeChange?.('municipios')} type="button"><span aria-hidden="true" className="clp-territory-icon clp-territory-icon-municipalities" /> Municípios</button>
           </div>
         )}
       </div>
