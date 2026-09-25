@@ -1,4 +1,5 @@
 import pg from 'pg'
+import { buildHighlights } from './highlights.js'
 import type {
   DashboardDataset,
   DashboardKind,
@@ -6,7 +7,6 @@ import type {
   DetailRow,
   FilterDefinition,
   HighlightGroup,
-  HighlightItem,
   ComponentInsight,
   InsightGroup,
   RankingHistoryItem,
@@ -38,7 +38,6 @@ interface DetailResultRow {
   ano_referencia?: number
   nota: number | null
   posicao: number | null
-  delta_posicao?: number | null
 }
 
 interface ComponentRow {
@@ -234,115 +233,6 @@ function buildMunicipalStateRanking(
     })
     .sort((a, b) => b.value - a.value || a.sortName.localeCompare(b.sortName, 'pt-BR'))
     .map(({ code, name, sortName, value, wasNull }, index) => ({ position: index + 1, name, code, label: sortName, value, wasNull }))
-}
-
-const highlightGroupLabels: Record<string, string> = {
-  GERAL: 'Nota geral',
-  GRUPO: 'Grupos',
-  PILAR: 'Pilares',
-  DIMENSAO: 'Dimensões',
-  INDICADOR: 'Indicadores',
-}
-
-function topTier(position: number): 3 | 5 | 10 | undefined {
-  if (position <= 3) return 3
-  if (position <= 5) return 5
-  if (position <= 10) return 10
-  return undefined
-}
-
-function buildHighlights(
-  components: ComponentRow[],
-  results: DetailResultRow[],
-  selectedYear: number,
-  kind: DashboardKind,
-): HighlightGroup[] {
-  const allowedTypes = new Set(
-    kind === 'ibid'
-      ? ['GERAL', 'DIMENSAO', 'INDICADOR']
-      : ['GERAL', 'PILAR', 'INDICADOR'],
-  )
-  const resultsByComponent = new Map<string, DetailResultRow[]>()
-  const componentById = new Map(components.map((component) => [component.id, component]))
-
-  function pillarFor(component: ComponentRow) {
-    let current: ComponentRow | undefined = component
-    const visited = new Set<string>()
-
-    while (current && !visited.has(current.id)) {
-      if (current.tipo === 'PILAR') return current
-      visited.add(current.id)
-      current = current.parent_id ? componentById.get(current.parent_id) : undefined
-    }
-
-    return undefined
-  }
-
-  for (const result of results) {
-    if (!result.componente_id || !result.ano_referencia) continue
-    const componentResults = resultsByComponent.get(result.componente_id) ?? []
-    componentResults.push(result)
-    resultsByComponent.set(result.componente_id, componentResults)
-  }
-
-  const itemsByType = new Map<string, HighlightItem[]>()
-
-  for (const component of components) {
-    if (!allowedTypes.has(component.tipo)) continue
-    const componentResults = (resultsByComponent.get(component.id) ?? [])
-      .filter((result) => result.posicao !== null && result.posicao !== undefined)
-      .sort((a, b) => (a.ano_referencia ?? 0) - (b.ano_referencia ?? 0))
-    const current = componentResults
-      .filter((result) => (result.ano_referencia ?? 0) <= selectedYear)
-      .at(-1)
-    if (!current?.posicao) continue
-
-    const change = current.delta_posicao ?? 0
-    const previousPosition = current.delta_posicao === null || current.delta_posicao === undefined
-      ? undefined
-      : current.posicao + current.delta_posicao
-    const currentTier = topTier(current.posicao)
-    const hasLargeVariation = Math.abs(change) > 3
-
-    if (!hasLargeVariation && !currentTier) continue
-
-    const previousTier = previousPosition ? topTier(previousPosition) : undefined
-    const pillar = pillarFor(component)
-    const item: HighlightItem = {
-      id: component.id,
-      title: component.tipo === 'GERAL'
-        ? kind === 'ibid' ? 'Nota Geral IBID' : 'Nota Geral CLP'
-        : component.nome,
-      pillarId: pillar?.id,
-      pillarTitle: pillar?.nome,
-      direction: change > 0 ? 'up' : change < 0 ? 'down' : 'stable',
-      change,
-      currentPosition: current.posicao,
-      previousPosition,
-      topTier: currentTier,
-      topStatus: currentTier
-        ? !previousTier || previousTier > currentTier
-          ? 'entered'
-          : 'remained'
-        : undefined,
-      year: selectedYear,
-    }
-
-    const typeItems = itemsByType.get(component.tipo) ?? []
-    typeItems.push(item)
-    itemsByType.set(component.tipo, typeItems)
-  }
-
-  return Object.entries(highlightGroupLabels).flatMap(([type, label]) => {
-    const items = itemsByType.get(type)
-    if (!items?.length) return []
-
-    return [{
-      id: type.toLowerCase(),
-      label,
-      items: items.sort((a, b) => Math.abs(b.change) - Math.abs(a.change) || a.currentPosition - b.currentPosition || a.title.localeCompare(b.title, 'pt-BR')),
-    }]
-  })
 }
 
 function historyFor(territory: TerritoryRow | undefined, results: ResultRow[], entities: TerritoryRow[]): RankingHistoryItem[] {
@@ -958,15 +848,42 @@ export class DashboardService {
           allTerritories,
         )
 
-        const highlightResult = await client.query<DetailResultRow>(`
-          select rr.componente_id, rr.territorio_id as id, rr.ano_referencia,
-            rr.nota_normalizada::float8 as nota, rr.posicao, rr.delta_posicao
-          from resultado_ranking rr
-          where rr.edicao_id = $1 and rr.componente_id = any($2::uuid[])
-            and rr.ano_referencia <= $3 and rr.territorio_id = $4
-          order by rr.ano_referencia
-        `, [edition.id, componentIds, selectedYear, primary.id])
-        highlights = buildHighlights(components, highlightResult.rows, selectedYear, kind)
+        // Busca os dois anos em todas as edições: o ano anterior pode estar em outra publicação.
+        type HighlightYearRow = DetailResultRow & { edicao_id: string; ano_referencia: number }
+        const highlightResult = kind === 'ibid'
+          ? await client.query<HighlightYearRow>(`
+              select componente_id, edicao_id, id, ano_referencia, nota, posicao from (
+                select rr.componente_id, rr.edicao_id, rr.territorio_id as id, rr.ano_referencia,
+                  rr.nota_normalizada::float8 as nota,
+                  coalesce(rr.posicao, case when rr.nota_normalizada is not null then
+                    rank() over (
+                      partition by rr.edicao_id, rr.componente_id, rr.ano_referencia
+                      order by rr.nota_normalizada desc nulls last
+                    )
+                  end)::integer as posicao
+                from resultado_ranking rr
+                join territorio t on t.id = rr.territorio_id
+                where rr.edicao_id = any($1::uuid[]) and rr.componente_id = any($2::uuid[])
+                  and rr.ano_referencia between $3::integer - 1 and $3::integer and t.tipo = $5
+              ) ranked
+              where id = $4
+            `, [editionIds, componentIds, selectedYear, primary.id, config.entityType])
+          : await client.query<HighlightYearRow>(`
+              select rr.componente_id, rr.edicao_id, rr.territorio_id as id, rr.ano_referencia,
+                rr.nota_normalizada::float8 as nota, rr.posicao
+              from resultado_ranking rr
+              where rr.edicao_id = any($1::uuid[]) and rr.componente_id = any($2::uuid[])
+                and rr.ano_referencia between $3::integer - 1 and $3::integer and rr.territorio_id = $4
+            `, [editionIds, componentIds, selectedYear, primary.id])
+        const highlightByYear = new Map<string, HighlightYearRow>()
+        for (const row of highlightResult.rows) {
+          const key = `${row.componente_id}:${row.ano_referencia}`
+          const chosen = highlightByYear.get(key)
+          if (prefersEdition(editionYearById.get(row.edicao_id)!, chosen && editionYearById.get(chosen.edicao_id), row.ano_referencia)) {
+            highlightByYear.set(key, row)
+          }
+        }
+        highlights = buildHighlights(components, [...highlightByYear.values()], selectedYear, kind)
 
         const insightLevelsForMetric = componentsForMetric(components, metric.id)
         if (insightLevelsForMetric.length) {

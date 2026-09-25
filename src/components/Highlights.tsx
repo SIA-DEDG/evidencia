@@ -37,10 +37,8 @@ function MovementIcon({ direction }: { direction: HighlightDirection }) {
   )
 }
 
-function HighlightCard({ item, primaryName, showTitle = true }: { item: HighlightItem; primaryName: string; showTitle?: boolean }) {
-  const rankingTrail = item.previousPosition
-    ? `${item.previousPosition}º → ${item.currentPosition}º`
-    : `${item.currentPosition}º`
+export function HighlightCard({ item, primaryName, showTitle = true }: { item: HighlightItem; primaryName: string; showTitle?: boolean }) {
+  const rankingTrail = `${item.previousPosition}º (${item.previousYear}) → ${item.currentPosition}º (${item.year})`
   const badge = item.change === 0
     ? `${item.currentPosition}º`
     : `${item.change > 0 ? '+' : ''}${item.change}`
@@ -67,7 +65,7 @@ function HighlightCard({ item, primaryName, showTitle = true }: { item: Highligh
               <span className={item.direction === 'stable' ? 'highlight-top-stable' : ''}>top {item.topTier}</span>{' '}
             </>
           )}
-          no ranking Brasil · {rankingTrail} · {item.year}
+          no ranking Brasil · {rankingTrail}
         </p>
       </div>
       <strong className={`highlight-badge highlight-badge-${item.direction}`}>{badge}</strong>
@@ -178,13 +176,15 @@ export function Highlights({ groups, kind, primaryName }: HighlightsProps) {
     setExpandedPillars(new Set(expandableMacroIds))
   }
 
+  if (!groups.some((group) => group.items.length > 0)) return null
+
   return (
     <section className="highlights-panel" aria-labelledby="highlights-title">
       <div className="highlights-heading">
         <div className="highlights-heading-copy">
           <h2 id="highlights-title">Destaques</h2>
           <p>
-            Esta seção reúne as posições de {primaryName} no {studyName} que merecem atenção especial, segundo os seguintes critérios: variação de mais de 3 posições (subida ou queda) no ranking Brasil; entrada ou permanência entre os top 10, top 5 ou top 3 do ranking nacional.
+            Esta seção compara as posições de {primaryName} no {studyName} com o ano imediatamente anterior, segundo os seguintes critérios: variação de mais de 3 posições (subida ou queda) no ranking Brasil; entrada ou permanência entre os top 10, top 5 ou top 3 do ranking nacional.
           </p>
         </div>
         {usesPillarLayout && expandableMacroIds.length > 0 && (
@@ -195,7 +195,7 @@ export function Highlights({ groups, kind, primaryName }: HighlightsProps) {
         )}
       </div>
 
-      {groups.length && usesPillarLayout ? (
+      {usesPillarLayout ? (
         <div className="highlight-macros" id="highlight-groups">
           {standaloneGroups.map((group) => (
             <div className="highlight-group" key={group.id}>
@@ -264,7 +264,7 @@ export function Highlights({ groups, kind, primaryName }: HighlightsProps) {
             )
           })}
         </div>
-      ) : groups.length ? (
+      ) : (
         <div className={indicatorGroups.length ? 'highlight-groups' : 'highlight-groups highlight-groups-single'} id="highlight-groups">
           <div className="highlight-column">
             {structuralGroups.map((group) => (
@@ -289,8 +289,6 @@ export function Highlights({ groups, kind, primaryName }: HighlightsProps) {
             </div>
           )}
         </div>
-      ) : (
-        <p className="highlights-empty">Nenhuma posição atende aos critérios de destaque no ano selecionado.</p>
       )}
 
       {shouldShowToggle && (

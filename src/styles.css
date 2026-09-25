@@ -957,7 +957,6 @@
   .highlight-movement-up, .highlight-movement-down, .highlight-movement-stable, .highlight-top-stable { @apply font-medium; }
   .highlight-top-stable { @apply text-[#dda646]; }
   .highlight-badge { @apply shrink-0 self-center text-base font-bold; }
-  .highlights-empty { @apply rounded-[10px] bg-white px-4 py-6 text-center text-sm text-muted; }
   .highlights-toggle { @apply ml-auto flex items-center gap-2 border-x-0 border-b border-t-0 bg-transparent px-0 pb-0.5 text-sm transition-opacity hover:opacity-75; border-color: var(--dashboard-accent); color: var(--dashboard-accent); }
   .highlights-toggle img { @apply transition-transform; }
 

@@ -53,7 +53,9 @@ export interface HighlightItem {
   direction: HighlightDirection
   change: number
   currentPosition: number
-  previousPosition?: number
+  previousPosition: number
+  /** Ano imediatamente anterior ao ano selecionado. */
+  previousYear: number
   topTier?: 3 | 5 | 10
   topStatus?: 'entered' | 'remained'
   year: number
