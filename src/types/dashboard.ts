@@ -102,7 +102,7 @@ export interface DetailRow {
   description?: string
   unit?: string
   source?: string
-  /** Presente só nos indicadores com responsáveis cadastrados (hoje, os do IBID). */
+  /** Presente só nos indicadores com responsáveis cadastrados. */
   responsibility?: IndicatorResponsibility
   children?: DetailRow[]
 }

@@ -889,6 +889,8 @@
   .detail-responsibility strong { @apply text-sm font-medium text-[#262626] dark:text-slate-200; }
   .detail-responsibility small { @apply text-[11px] leading-tight text-muted dark:text-slate-400; }
   .detail-responsibility em { @apply mt-0.5 border-t border-[#e1edfa] pt-1.5 not-italic text-[#54555a] dark:border-slate-700 dark:text-slate-400; }
+  .detail-responsibility b { @apply text-[10px] font-semibold uppercase tracking-wide text-muted; }
+  .detail-responsibility-pair { @apply flex flex-col gap-3; }
   .detail-table .level-badge { @apply border-0 bg-[#0b4f91]/20 px-2 py-0 text-xs font-medium leading-5 text-brand-500; }
   .level-badge-stack { @apply flex shrink-0 flex-col items-center gap-1; }
   .detail-row-title-group { @apply flex min-w-0 flex-col gap-0.5; }

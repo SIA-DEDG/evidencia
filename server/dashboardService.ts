@@ -59,9 +59,9 @@ interface ResponsibilityRow {
   tipo_relacao: string
   esfera_predominante: string
   justificativa: string
-  papel: string
+  papel: string | null
   base_legal: string | null
-  orgao: string
+  orgao: string | null
 }
 
 const kindConfig = {
@@ -464,6 +464,8 @@ function groupResponsibilities(rows: ResponsibilityRow[]) {
       }
       byComponent.set(row.componente_id, responsibility)
     }
+    // Indicador fora do Executivo estadual (ex.: custo da função legislativa) vem sem órgão, só com a justificativa.
+    if (!row.orgao) continue
     const agency = { name: row.orgao, legalBasis: row.base_legal ?? undefined }
     if (row.papel === 'PRINCIPAL') responsibility.principal.push(agency)
     else responsibility.coResponsible.push(agency)
@@ -885,8 +887,8 @@ export class DashboardService {
           select es.componente_id, es.tipo_relacao, es.esfera_predominante, es.justificativa,
             ro.papel, ro.base_legal, o.nome as orgao
           from escolhida es
-          join responsabilidade_orgao ro on ro.responsabilidade_indicador_id = es.id
-          join orgao o on o.id = ro.orgao_id
+          left join responsabilidade_orgao ro on ro.responsabilidade_indicador_id = es.id
+          left join orgao o on o.id = ro.orgao_id
           order by es.componente_id, ro.ordem, o.nome
         `, [editionIds, edition.id])).rows))
         details = buildDetails(

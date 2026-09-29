@@ -21,7 +21,7 @@ import {
 import { BrazilMap } from './BrazilMap'
 import { FilterDrawer } from './FilterDrawer'
 import { ComparisonHighlights } from './ComparisonHighlights'
-import { hasResponsibility, ResponsibilityCell, ResponsibilityDetails, responsibilityHeader } from './IndicatorResponsibility'
+import { hasResponsibility, ResponsibilityDetails, responsibilityHeader, ResponsibilityPairCell } from './IndicatorResponsibility'
 import { childRows, conceptRows, type ConceptChildRow, type ConceptRow } from '../data/comparisonRelations'
 import { generalMetricValue, pillarRelation, pillarRelationLabel, pillarRelations } from '../data/studyRelations'
 import type { ComparisonDataset, DashboardDataset, DetailRow, RankingItem, SelectOption } from '../types/dashboard'
@@ -450,8 +450,7 @@ function PairName({ clp, ibid }: { clp: string; ibid: string }) {
 
 function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateName: string }) {
   const rows = conceptRows(data)
-  // Os responsáveis cadastrados são os dos indicadores do IBID.
-  const showResponsibility = hasResponsibility(data.ibid.details)
+  const showResponsibility = hasResponsibility(data.ibid.details) || hasResponsibility(data.clp.details)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set([rows[0]?.id ?? '']))
   const [mobileStudy, setMobileStudy] = useState<'ibid' | 'clp'>('ibid')
   const [openDetails, setOpenDetails] = useState<Set<string>>(() => new Set())
@@ -562,7 +561,7 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
           <thead>
             <tr>
               <th className="detail-hierarchy-header">Pilar / indicador relacionado</th><th>IBID</th><th>CLP</th><th>Descrição</th>
-              {showResponsibility && <th>{responsibilityHeader} · IBID</th>}
+              {showResponsibility && <th>{responsibilityHeader}</th>}
               <th>Fonte</th>
             </tr>
           </thead>
@@ -654,7 +653,7 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
           <td>{scoreCell(child.ibid)}</td>
           <td>{scoreCell(child.clp)}</td>
           <DescriptionCell clp={child.clp} ibid={child.ibid} />
-          {showResponsibility && <ResponsibilityCell responsibility={child.ibid?.responsibility} />}
+          {showResponsibility && <ResponsibilityPairCell clp={child.clp?.responsibility} ibid={child.ibid?.responsibility} />}
           <td className="detail-text-cell comparison-source-cell" title={child.source}>{child.source}</td>
         </tr>
       ))}
