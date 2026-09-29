@@ -1,5 +1,4 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
-import { pageZoom } from '../pageZoom'
 import type { DashboardKind, RankingItem } from '../types/dashboard'
 
 export interface MapLocation {
@@ -103,8 +102,7 @@ export function ChoroplethMap({
   function showTooltip(locationId: string, clientX: number, clientY: number) {
     const bounds = containerRef.current?.getBoundingClientRect()
     if (!bounds) return
-    const zoom = pageZoom()
-    setTooltip({ locationId, x: (clientX - bounds.left) / zoom, y: (clientY - bounds.top) / zoom })
+    setTooltip({ locationId, x: clientX - bounds.left, y: clientY - bounds.top })
   }
 
   function handlePointer(event: MouseEvent<SVGPathElement>, locationId: string) {

@@ -1,6 +1,5 @@
 import { Filter, X } from 'lucide-react'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react'
-import { pageZoom } from '../pageZoom'
 
 interface FilterDrawerProps {
   children: ReactNode
@@ -14,7 +13,7 @@ function stickyHeaderOffset() {
   const nav = document.querySelector('[data-sia-header] nav')
   if (!nav) return 0
   const rect = nav.getBoundingClientRect()
-  return rect.top <= 1 ? Math.max(0, Math.round(rect.bottom / pageZoom())) : 0
+  return rect.top <= 1 ? Math.max(0, Math.round(rect.bottom)) : 0
 }
 
 export function FilterDrawer({ children, targetRef, title = 'Filtros' }: FilterDrawerProps) {
