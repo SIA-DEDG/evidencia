@@ -60,8 +60,8 @@ function getHeroExtensionTone(columnIndex: number, rowIndex: number): HeroTileTo
   return 'base'
 }
 
-const heroLeftExtensionTiles = Array.from({ length: 40 }, (_, columnOffset) => {
-  const columnIndex = columnOffset - 40
+const heroLeftExtensionTiles = Array.from({ length: 80 }, (_, columnOffset) => {
+  const columnIndex = columnOffset - 80
   return Array.from({ length: 5 }, (_, rowIndex) => ({
     columnIndex,
     rowIndex,
@@ -85,8 +85,8 @@ const assistantTileColors: Record<AssistantTileTone, string> = {
 }
 
 const assistantExtensionTiles = [
-  ...Array.from({ length: 40 }, (_, index) => index - 40),
-  ...Array.from({ length: 40 }, (_, index) => index + 18),
+  ...Array.from({ length: 80 }, (_, index) => index - 80),
+  ...Array.from({ length: 80 }, (_, index) => index + 18),
 ].flatMap((columnIndex) => Array.from({ length: 3 }).flatMap((_, rowIndex) => {
   const variation = Math.abs((columnIndex * 5) + (rowIndex * 7) + (columnIndex * rowIndex * 3)) % 11
   if (variation > 2) return []

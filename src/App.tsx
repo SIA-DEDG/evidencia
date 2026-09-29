@@ -235,7 +235,7 @@ export default function App() {
   }, [dashboard, page])
 
   return (
-    <div className="min-h-screen bg-canvas text-ink transition-colors dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex min-h-screen flex-col bg-canvas text-ink transition-colors dark:bg-slate-950 dark:text-slate-100">
       <HeaderIntegration
         dataMeta={dashboard?.meta ?? comparison?.meta ?? (page === 'sobre' ? siteMeta ?? undefined : undefined)}
         fontScale={fontScale}
@@ -245,9 +245,9 @@ export default function App() {
         page={page}
       />
       {loading && page === 'sobre' && <LoadingState label="Interpretando busca e carregando dados" overlay />}
-      {page !== 'sobre' && loading && !dashboard && !comparison && <div className="page-shell"><LoadingState label={page === 'comparativo' ? 'Carregando comparação entre os estudos' : 'Carregando dados do painel'} /></div>}
+      {page !== 'sobre' && loading && !dashboard && !comparison && <div className="page-shell page-fill"><LoadingState label={page === 'comparativo' ? 'Carregando comparação entre os estudos' : 'Carregando dados do painel'} /></div>}
       {page !== 'sobre' && error && !dashboard && !comparison && (
-        <div className="page-shell">
+        <div className="page-shell page-fill">
           <div className="data-error" role="alert">
             <strong>Não foi possível carregar os dados.</strong>
             <span>{error}</span>
@@ -264,14 +264,14 @@ export default function App() {
         />
       )}
       {comparison && page === 'comparativo' && (
-        <div className="relative">
+        <div className="relative flex-1">
           {loading && <LoadingState label="Atualizando comparação" overlay />}
           <ComparisonPage data={comparison} onFiltersChange={(filters) => void loadComparison(filters)} />
           {error && <div className="page-shell pt-0 text-sm text-red-700" role="alert">{error}</div>}
         </div>
       )}
       {dashboard && (
-        <div className="relative">
+        <div className="relative flex-1">
           {loading && <LoadingState label="Atualizando indicadores" overlay />}
           <DashboardPage
             data={dashboard}

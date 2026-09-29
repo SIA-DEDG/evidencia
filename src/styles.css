@@ -55,8 +55,14 @@
   .update-strip span:first-child { @apply flex items-center gap-2; }
   .update-strip svg { @apply shrink-0 text-brand-500; }
   .page-shell { @apply w-full px-4 pb-6 pt-5 sm:px-6; }
+  /* Estados de carregamento e erro ocupam a altura restante da tela até o rodapé. */
+  .page-fill { @apply flex flex-1 flex-col; }
+  .page-fill > .loading-state { @apply flex-1; }
 
   .home-page {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
     width: 100%;
     overflow: hidden;
     padding-bottom: 24px;
@@ -282,7 +288,9 @@
 
   .home-studies {
     position: relative;
-    height: 822px;
+    display: flex;
+    flex: 1 0 auto;
+    min-height: 822px;
     margin-top: 20px;
     background: #f3f6fa;
     font-family: Inter, sans-serif;
@@ -290,8 +298,11 @@
   .home-studies-inner {
     position: relative;
     z-index: 2;
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
     width: min(1440px, 100%);
-    height: 822px;
+    min-height: 822px;
     margin: 0 auto;
     padding: 0 24px;
   }
@@ -320,6 +331,7 @@
   }
   .home-study-grid {
     display: grid;
+    flex: 1 0 auto;
     grid-template-columns: 380px 400px;
     justify-content: center;
     gap: 30px;
@@ -327,7 +339,7 @@
   }
   .home-study-card {
     display: flex;
-    height: 755px;
+    min-height: 755px;
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
@@ -643,8 +655,8 @@
   .development-notice svg { @apply mt-0.5 text-amber-600; }
   .development-notice h2 { @apply text-sm font-semibold; }
   .development-notice p { @apply mt-1 text-xs leading-relaxed text-amber-900; }
-  .about-study-grid { @apply grid max-w-[1200px] gap-[30px] lg:grid-cols-3; }
-  .about-study-grid-two { @apply max-w-[800px] lg:grid-cols-2; }
+  .about-study-grid { @apply grid gap-[30px] lg:grid-cols-3; }
+  .about-study-grid-two { @apply lg:grid-cols-2; }
   .study-card { @apply flex min-h-[531px] flex-col rounded-[10px] bg-gradient-to-br from-[#e1edfa] to-white p-4 shadow-card dark:from-slate-800 dark:to-slate-900; }
   .study-card-actions { @apply mt-auto flex flex-col gap-2 border-t border-dashed border-[#bfd0e0] pt-4 dark:border-slate-600; }
   .study-card-primary-action { @apply inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border-0 bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-px hover:bg-[#023d83] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2f8fd1]/50 focus-visible:ring-offset-2; }
@@ -1052,6 +1064,16 @@
   .page-shell { padding-left: 24px; padding-right: 24px; }
   .summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; }
   .summary-grid.comparison-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Telas mais largas que o layout de 1440px: a home se estica em vez de ficar centralizada. */
+@media (min-width: 1441px) {
+  .home-hero-background, .home-hero-tiles { left: calc(100% - 1440px); transform: none; }
+  .home-hero-shade { left: 0; width: calc(100% - 561px); }
+  .home-hero-inner, .home-studies-inner { width: 100%; }
+  .home-study-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: stretch; }
+  .study-divider { width: 100%; }
+  .home-assistant-inner { width: calc(100% - 58px); margin-left: 29px; }
 }
 
 @media (max-width: 1180px) {
