@@ -18,13 +18,12 @@ function relationText(responsibility: IndicatorResponsibility) {
   return `Relação: ${responsibility.relation} · Esfera: ${responsibility.sphere}`
 }
 
-/** A célula mostra os órgãos; a base legal e a justificativa ficam no texto ao passar o mouse. */
+/** A célula mostra os órgãos; a base legal de cada um fica no texto ao passar o mouse. */
 function responsibilityTitle(responsibility: IndicatorResponsibility) {
   return [
     responsibility.principal.length ? `Principal: ${agenciesWithBasis(responsibility.principal)}` : '',
     responsibility.coResponsible.length ? `Corresponsáveis: ${agenciesWithBasis(responsibility.coResponsible)}` : '',
     relationText(responsibility),
-    `Justificativa: ${responsibility.justification}`,
   ].filter(Boolean).join('\n')
 }
 
@@ -39,6 +38,11 @@ export function ResponsibilityCell({ responsibility }: { responsibility?: Indica
       </span>
     </td>
   )
+}
+
+export function JustificationCell({ responsibility }: { responsibility?: IndicatorResponsibility }) {
+  const text = responsibility?.justification.trim()
+  return <td className="detail-text-cell" title={text}>{text || '—'}</td>
 }
 
 /** Itens da lista de detalhes da tabela no celular. */

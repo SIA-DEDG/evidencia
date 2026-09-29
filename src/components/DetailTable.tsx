@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Info } from 
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { formatIndicatorUnit } from '../data/indicatorUnit'
 import { IbidDataInfo } from './IbidDataInfo'
-import { hasResponsibility, ResponsibilityCell, ResponsibilityDetails, responsibilityHeader } from './IndicatorResponsibility'
+import { hasResponsibility, JustificationCell, ResponsibilityCell, ResponsibilityDetails, responsibilityHeader } from './IndicatorResponsibility'
 import type { DashboardKind, DetailRow } from '../types/dashboard'
 
 interface DetailTableProps {
@@ -140,7 +140,12 @@ export function DetailTable({
             <td>{cellValue(row.year)}</td>
             <td className="detail-text-cell" title={row.description}>{cellValue(row.description)}</td>
             <td className="detail-text-cell" title={row.unit}>{formatIndicatorUnit(row.unit)}</td>
-            {showResponsibility && <ResponsibilityCell responsibility={row.responsibility} />}
+            {showResponsibility && (
+              <>
+                <ResponsibilityCell responsibility={row.responsibility} />
+                <JustificationCell responsibility={row.responsibility} />
+              </>
+            )}
             <td className="detail-text-cell" title={row.source}>{cellValue(row.source)}</td>
           </tr>
           {hasChildren && isExpanded && renderRows(row.children!, depth + 1, visibleIndex)}
@@ -242,7 +247,7 @@ export function DetailTable({
             <col className="detail-col-year" />
             <col className="detail-col-description" />
             <col className="detail-col-unit" />
-            {showResponsibility && <col className="detail-col-responsibility" />}
+            {showResponsibility && <><col className="detail-col-responsibility" /><col className="detail-col-justification" /></>}
             <col className="detail-col-source" />
           </colgroup>
           <thead>
@@ -255,7 +260,7 @@ export function DetailTable({
                   <th rowSpan={2} scope="col">Ano</th>
                   <th rowSpan={2} scope="col">Descrição</th>
                   <th rowSpan={2} scope="col" title="Unidade original do indicador (mil, mi, bi, %, R$ etc.). As notas de ranking são normalizadas.">Unidade</th>
-                  {showResponsibility && <th rowSpan={2} scope="col">{responsibilityHeader}</th>}
+                  {showResponsibility && <><th rowSpan={2} scope="col">{responsibilityHeader}</th><th rowSpan={2} scope="col">Justificativa</th></>}
                   <th rowSpan={2} scope="col">Fonte</th>
                 </tr>
                 <tr>
@@ -267,7 +272,7 @@ export function DetailTable({
               <tr>
                 <th className="detail-hierarchy-header" scope="col">{hierarchyLabel}</th>
                 <th scope="col">Ranking Brasil</th><th scope="col">Nota no Brasil</th><th scope="col">Ranking {regionalScope}</th><th scope="col">Nota média {regionalScope}</th>
-                <th scope="col">Ano</th><th scope="col">Descrição</th><th scope="col" title="Unidade original do indicador (mil, mi, bi, %, R$ etc.). As notas de ranking são normalizadas.">Unidade</th>{showResponsibility && <th scope="col">{responsibilityHeader}</th>}
+                <th scope="col">Ano</th><th scope="col">Descrição</th><th scope="col" title="Unidade original do indicador (mil, mi, bi, %, R$ etc.). As notas de ranking são normalizadas.">Unidade</th>{showResponsibility && <><th scope="col">{responsibilityHeader}</th><th scope="col">Justificativa</th></>}
                 <th scope="col">Fonte</th>
               </tr>
             )}
