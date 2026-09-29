@@ -8,6 +8,7 @@ import type {
   FilterDefinition,
   HighlightGroup,
   ComponentInsight,
+  IndicatorResponsibility,
   InsightGroup,
   RankingHistoryItem,
   RankingItem,
@@ -51,6 +52,16 @@ interface ComponentRow {
   fonte: string | null
   unidade_medida: string | null
   ultimo_ano_disponivel?: number | null
+}
+
+interface ResponsibilityRow {
+  componente_id: string
+  tipo_relacao: string
+  esfera_predominante: string
+  justificativa: string
+  papel: string
+  base_legal: string | null
+  orgao: string
 }
 
 const kindConfig = {
@@ -438,6 +449,28 @@ function indexComponents(components: ComponentRow[]) {
   return { byParent, general, roots, pathByComponent }
 }
 
+/** Junta as linhas de órgão (uma por órgão) na responsabilidade de cada indicador. */
+function groupResponsibilities(rows: ResponsibilityRow[]) {
+  const byComponent = new Map<string, IndicatorResponsibility>()
+  for (const row of rows) {
+    let responsibility = byComponent.get(row.componente_id)
+    if (!responsibility) {
+      responsibility = {
+        relation: row.tipo_relacao,
+        sphere: row.esfera_predominante,
+        justification: row.justificativa,
+        principal: [],
+        coResponsible: [],
+      }
+      byComponent.set(row.componente_id, responsibility)
+    }
+    const agency = { name: row.orgao, legalBasis: row.base_legal ?? undefined }
+    if (row.papel === 'PRINCIPAL') responsibility.principal.push(agency)
+    else responsibility.coResponsible.push(agency)
+  }
+  return byComponent
+}
+
 const metricGroupLabels: Record<string, string> = {
   GERAL: 'Geral',
   GRUPO: 'Grupos',
@@ -488,6 +521,7 @@ function buildDetails(
   kind: DashboardKind,
   selectedYear: number,
   entities: TerritoryRow[],
+  responsibilityByComponent: Map<string, IndicatorResponsibility>,
 ) {
   const { byParent, general, roots, pathByComponent } = indexComponents(components)
 
@@ -540,6 +574,7 @@ function buildDetails(
       description: component.descricao ?? undefined,
       unit: component.unidade_medida ?? undefined,
       source: component.fonte ?? undefined,
+      responsibility: responsibilityByComponent.get(component.id),
       children: childRows,
     }
   }
@@ -835,6 +870,25 @@ export class DashboardService {
                 and rr.territorio_id = any($4::uuid[])
             `, [edition.id, componentIds, selectedYear, [...detailTerritoryIds]])
         const detailRows = detailResult.rows.map((row) => ({ ...row, nota: numberValue(row.nota) }))
+        // Uma carga por indicador: a da edição do ano selecionado; se ela não tiver, a da edição mais recente.
+        const responsibilityByComponent = await cachedReference(`responsaveis:${edition.id}:${editionIds.join(',')}`, async () => groupResponsibilities((await client.query<ResponsibilityRow>(`
+          with escolhida as (
+            select distinct on (ri.componente_id) ri.id, ri.componente_id,
+              ri.tipo_relacao, ri.esfera_predominante, ri.justificativa
+            from responsabilidade_indicador ri
+            join edicao e on e.id = ri.edicao_id
+            join carga_importacao ci on ci.id = ri.carga_importacao_id and ci.status = 'SUCESSO'
+            join arquivo_fonte af on af.id = ci.arquivo_fonte_id and af.ativo
+            where ri.edicao_id = any($1::uuid[])
+            order by ri.componente_id, ri.edicao_id = $2 desc, e.ano desc, ci.concluida_em desc
+          )
+          select es.componente_id, es.tipo_relacao, es.esfera_predominante, es.justificativa,
+            ro.papel, ro.base_legal, o.nome as orgao
+          from escolhida es
+          join responsabilidade_orgao ro on ro.responsabilidade_indicador_id = es.id
+          join orgao o on o.id = ro.orgao_id
+          order by es.componente_id, ro.ordem, o.nome
+        `, [editionIds, edition.id])).rows))
         details = buildDetails(
           components,
           detailRows,
@@ -846,6 +900,7 @@ export class DashboardService {
           kind,
           selectedYear,
           allTerritories,
+          responsibilityByComponent,
         )
 
         // Busca os dois anos em todas as edições: o ano anterior pode estar em outra publicação.

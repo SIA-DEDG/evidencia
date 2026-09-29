@@ -67,6 +67,23 @@ export interface HighlightGroup {
   items: HighlightItem[]
 }
 
+export interface ResponsibleAgency {
+  name: string
+  /** Artigo da lei de organização do governo que dá a competência ao órgão (ex.: art. 20, I, II). */
+  legalBasis?: string
+}
+
+/** Órgãos do governo do Piauí responsáveis pelo indicador. */
+export interface IndicatorResponsibility {
+  /** Direta, Indireta ou Monitoramento. */
+  relation: string
+  /** Esfera que mais influencia o resultado (Estadual, Federal, Mercado etc.). */
+  sphere: string
+  justification: string
+  principal: ResponsibleAgency[]
+  coResponsible: ResponsibleAgency[]
+}
+
 export interface DetailRow {
   id: string
   level: 'Grupo' | 'Pilar' | 'Dimensão' | 'Indicador'
@@ -85,6 +102,8 @@ export interface DetailRow {
   description?: string
   unit?: string
   source?: string
+  /** Presente só nos indicadores com responsáveis cadastrados (hoje, os do IBID). */
+  responsibility?: IndicatorResponsibility
   children?: DetailRow[]
 }
 

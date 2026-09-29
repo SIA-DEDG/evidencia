@@ -21,6 +21,7 @@ import {
 import { BrazilMap } from './BrazilMap'
 import { FilterDrawer } from './FilterDrawer'
 import { ComparisonHighlights } from './ComparisonHighlights'
+import { hasResponsibility, ResponsibilityCell, ResponsibilityDetails, responsibilityHeader } from './IndicatorResponsibility'
 import { childRows, conceptRows, type ConceptChildRow, type ConceptRow } from '../data/comparisonRelations'
 import { generalMetricValue, pillarRelation, pillarRelationLabel, pillarRelations } from '../data/studyRelations'
 import type { ComparisonDataset, DashboardDataset, DetailRow, RankingItem, SelectOption } from '../types/dashboard'
@@ -449,6 +450,8 @@ function PairName({ clp, ibid }: { clp: string; ibid: string }) {
 
 function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateName: string }) {
   const rows = conceptRows(data)
+  // Os responsáveis cadastrados são os dos indicadores do IBID.
+  const showResponsibility = hasResponsibility(data.ibid.details)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set([rows[0]?.id ?? '']))
   const [mobileStudy, setMobileStudy] = useState<'ibid' | 'clp'>('ibid')
   const [openDetails, setOpenDetails] = useState<Set<string>>(() => new Set())
@@ -480,7 +483,7 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
     const isDetailsOpen = openDetails.has(id)
     const children = isParent ? childRows(rows.find((item) => item.id === id)!) : []
     const hasChildren = children.length > 0
-    const hasMoreInformation = Boolean(row?.description?.trim() || row?.source?.trim())
+    const hasMoreInformation = Boolean(row?.description?.trim() || row?.source?.trim() || row?.responsibility)
 
     return (
       <Fragment key={id}>
@@ -519,6 +522,7 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
               <dl>
                 <div><dt>Descrição</dt><dd>{row?.description || '—'}</dd></div>
                 <div><dt>Fonte</dt><dd>{row?.source || '—'}</dd></div>
+                <ResponsibilityDetails responsibility={row?.responsibility} />
               </dl>
             </td>
           </tr>
@@ -546,16 +550,20 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
         </div>
       </div>
       <div className="detail-table-shell comparison-detail-table-shell" role="region" aria-label={`Conceitos comuns de ${stateName}`} tabIndex={0}>
-        <table className="detail-table comparison-detail-table">
+        <table className={`detail-table comparison-detail-table${showResponsibility ? ' comparison-detail-table-responsibility' : ''}`}>
           <colgroup>
             <col className="comparison-col-concept" />
             <col className="comparison-col-value" />
             <col className="comparison-col-value" />
             <col className="comparison-col-description" />
             <col className="comparison-col-source" />
+            {showResponsibility && <col className="comparison-col-responsibility" />}
           </colgroup>
           <thead>
-            <tr><th className="detail-hierarchy-header">Pilar / indicador relacionado</th><th>IBID</th><th>CLP</th><th>Descrição</th><th>Fonte</th></tr>
+            <tr>
+              <th className="detail-hierarchy-header">Pilar / indicador relacionado</th><th>IBID</th><th>CLP</th><th>Descrição</th><th>Fonte</th>
+              {showResponsibility && <th>{responsibilityHeader} · IBID</th>}
+            </tr>
           </thead>
           <tbody>
             {rows.map((row, index) => {
@@ -571,6 +579,7 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
                   key={row.id}
                   onToggle={() => toggle(row.id)}
                   row={row}
+                  showResponsibility={showResponsibility}
                 />
               )
             })}
@@ -602,13 +611,14 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
   )
 }
 
-function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row }: {
+function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row, showResponsibility }: {
   canExpand: boolean
   childrenRows: ConceptChildRow[]
   index: number
   isExpanded: boolean
   onToggle(): void
   row: ConceptRow
+  showResponsibility: boolean
 }) {
   const sources = [...new Set(row.relation.indicators.map((indicator) => indicator.source))].join(' · ')
   return (
@@ -626,6 +636,7 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
         {/* A descrição dos pilares na base é a do CLP (escala 0–100) e não vale para o IBID. */}
         <td className="detail-text-cell comparison-description-cell">—</td>
         <td className="detail-text-cell comparison-source-cell" title={sources}>{sources}</td>
+        {showResponsibility && <td className="detail-text-cell">—</td>}
       </tr>
       {isExpanded && childrenRows.map((child) => (
         <tr className="detail-row" key={child.id}>
@@ -643,6 +654,7 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
           <td>{scoreCell(child.clp)}</td>
           <DescriptionCell clp={child.clp} ibid={child.ibid} />
           <td className="detail-text-cell comparison-source-cell" title={child.source}>{child.source}</td>
+          {showResponsibility && <ResponsibilityCell responsibility={child.ibid?.responsibility} />}
         </tr>
       ))}
     </>
