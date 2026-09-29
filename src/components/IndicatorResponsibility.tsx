@@ -35,14 +35,10 @@ export function ResponsibilityCell({ responsibility }: { responsibility?: Indica
         {responsibility.principal.length > 0 && <strong>{agencyNames(responsibility.principal)}</strong>}
         {responsibility.coResponsible.length > 0 && <span>Corresponsáveis: {agencyNames(responsibility.coResponsible)}</span>}
         <small>{relationText(responsibility)}</small>
+        {responsibility.justification.trim() && <em>{responsibility.justification}</em>}
       </span>
     </td>
   )
-}
-
-export function JustificationCell({ responsibility }: { responsibility?: IndicatorResponsibility }) {
-  const text = responsibility?.justification.trim()
-  return <td className="detail-text-cell" title={text}>{text || '—'}</td>
 }
 
 /** Itens da lista de detalhes da tabela no celular. */

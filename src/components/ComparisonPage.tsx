@@ -21,7 +21,7 @@ import {
 import { BrazilMap } from './BrazilMap'
 import { FilterDrawer } from './FilterDrawer'
 import { ComparisonHighlights } from './ComparisonHighlights'
-import { hasResponsibility, JustificationCell, ResponsibilityCell, ResponsibilityDetails, responsibilityHeader } from './IndicatorResponsibility'
+import { hasResponsibility, ResponsibilityCell, ResponsibilityDetails, responsibilityHeader } from './IndicatorResponsibility'
 import { childRows, conceptRows, type ConceptChildRow, type ConceptRow } from '../data/comparisonRelations'
 import { generalMetricValue, pillarRelation, pillarRelationLabel, pillarRelations } from '../data/studyRelations'
 import type { ComparisonDataset, DashboardDataset, DetailRow, RankingItem, SelectOption } from '../types/dashboard'
@@ -556,13 +556,13 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
             <col className="comparison-col-value" />
             <col className="comparison-col-value" />
             <col className="comparison-col-description" />
-            {showResponsibility && <><col className="comparison-col-responsibility" /><col className="comparison-col-justification" /></>}
+            {showResponsibility && <col className="comparison-col-responsibility" />}
             <col className="comparison-col-source" />
           </colgroup>
           <thead>
             <tr>
               <th className="detail-hierarchy-header">Pilar / indicador relacionado</th><th>IBID</th><th>CLP</th><th>Descrição</th>
-              {showResponsibility && <><th>{responsibilityHeader} · IBID</th><th>Justificativa</th></>}
+              {showResponsibility && <th>{responsibilityHeader} · IBID</th>}
               <th>Fonte</th>
             </tr>
           </thead>
@@ -636,7 +636,7 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
         <td>{scoreCell(row.clp)}</td>
         {/* A descrição dos pilares na base é a do CLP (escala 0–100) e não vale para o IBID. */}
         <td className="detail-text-cell comparison-description-cell">—</td>
-        {showResponsibility && <><td className="detail-text-cell">—</td><td className="detail-text-cell">—</td></>}
+        {showResponsibility && <td className="detail-text-cell">—</td>}
         <td className="detail-text-cell comparison-source-cell" title={sources}>{sources}</td>
       </tr>
       {isExpanded && childrenRows.map((child) => (
@@ -654,12 +654,7 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
           <td>{scoreCell(child.ibid)}</td>
           <td>{scoreCell(child.clp)}</td>
           <DescriptionCell clp={child.clp} ibid={child.ibid} />
-          {showResponsibility && (
-            <>
-              <ResponsibilityCell responsibility={child.ibid?.responsibility} />
-              <JustificationCell responsibility={child.ibid?.responsibility} />
-            </>
-          )}
+          {showResponsibility && <ResponsibilityCell responsibility={child.ibid?.responsibility} />}
           <td className="detail-text-cell comparison-source-cell" title={child.source}>{child.source}</td>
         </tr>
       ))}
