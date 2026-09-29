@@ -140,8 +140,8 @@ export function DetailTable({
             <td>{cellValue(row.year)}</td>
             <td className="detail-text-cell" title={row.description}>{cellValue(row.description)}</td>
             <td className="detail-text-cell" title={row.unit}>{formatIndicatorUnit(row.unit)}</td>
-            <td className="detail-text-cell" title={row.source}>{cellValue(row.source)}</td>
             {showResponsibility && <ResponsibilityCell responsibility={row.responsibility} />}
+            <td className="detail-text-cell" title={row.source}>{cellValue(row.source)}</td>
           </tr>
           {hasChildren && isExpanded && renderRows(row.children!, depth + 1, visibleIndex)}
         </Fragment>
@@ -203,8 +203,8 @@ export function DetailTable({
                   <div><dt>Ano</dt><dd>{cellValue(row.year)}</dd></div>
                   <div><dt>Descrição</dt><dd>{cellValue(row.description)}</dd></div>
                   <div><dt>Unidade do indicador</dt><dd title={row.unit}>{formatIndicatorUnit(row.unit)}</dd></div>
-                  <div><dt>Fonte</dt><dd>{cellValue(row.source)}</dd></div>
                   <ResponsibilityDetails responsibility={row.responsibility} />
+                  <div><dt>Fonte</dt><dd>{cellValue(row.source)}</dd></div>
                 </dl>
               </td>
             </tr>
@@ -242,8 +242,8 @@ export function DetailTable({
             <col className="detail-col-year" />
             <col className="detail-col-description" />
             <col className="detail-col-unit" />
-            <col className="detail-col-source" />
             {showResponsibility && <col className="detail-col-responsibility" />}
+            <col className="detail-col-source" />
           </colgroup>
           <thead>
             {comparisonEnabled ? (
@@ -255,8 +255,8 @@ export function DetailTable({
                   <th rowSpan={2} scope="col">Ano</th>
                   <th rowSpan={2} scope="col">Descrição</th>
                   <th rowSpan={2} scope="col" title="Unidade original do indicador (mil, mi, bi, %, R$ etc.). As notas de ranking são normalizadas.">Unidade</th>
-                  <th rowSpan={2} scope="col">Fonte</th>
                   {showResponsibility && <th rowSpan={2} scope="col">{responsibilityHeader}</th>}
+                  <th rowSpan={2} scope="col">Fonte</th>
                 </tr>
                 <tr>
                   <th scope="col">Ranking Brasil</th><th scope="col">Nota no Brasil</th><th scope="col">Ranking {regionalScope}</th><th scope="col">Nota média {regionalScope}</th>
@@ -267,8 +267,8 @@ export function DetailTable({
               <tr>
                 <th className="detail-hierarchy-header" scope="col">{hierarchyLabel}</th>
                 <th scope="col">Ranking Brasil</th><th scope="col">Nota no Brasil</th><th scope="col">Ranking {regionalScope}</th><th scope="col">Nota média {regionalScope}</th>
-                <th scope="col">Ano</th><th scope="col">Descrição</th><th scope="col" title="Unidade original do indicador (mil, mi, bi, %, R$ etc.). As notas de ranking são normalizadas.">Unidade</th><th scope="col">Fonte</th>
-                {showResponsibility && <th scope="col">{responsibilityHeader}</th>}
+                <th scope="col">Ano</th><th scope="col">Descrição</th><th scope="col" title="Unidade original do indicador (mil, mi, bi, %, R$ etc.). As notas de ranking são normalizadas.">Unidade</th>{showResponsibility && <th scope="col">{responsibilityHeader}</th>}
+                <th scope="col">Fonte</th>
               </tr>
             )}
           </thead>

@@ -521,8 +521,8 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
             <td colSpan={3}>
               <dl>
                 <div><dt>Descrição</dt><dd>{row?.description || '—'}</dd></div>
-                <div><dt>Fonte</dt><dd>{row?.source || '—'}</dd></div>
                 <ResponsibilityDetails responsibility={row?.responsibility} />
+                <div><dt>Fonte</dt><dd>{row?.source || '—'}</dd></div>
               </dl>
             </td>
           </tr>
@@ -556,13 +556,14 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
             <col className="comparison-col-value" />
             <col className="comparison-col-value" />
             <col className="comparison-col-description" />
-            <col className="comparison-col-source" />
             {showResponsibility && <col className="comparison-col-responsibility" />}
+            <col className="comparison-col-source" />
           </colgroup>
           <thead>
             <tr>
-              <th className="detail-hierarchy-header">Pilar / indicador relacionado</th><th>IBID</th><th>CLP</th><th>Descrição</th><th>Fonte</th>
+              <th className="detail-hierarchy-header">Pilar / indicador relacionado</th><th>IBID</th><th>CLP</th><th>Descrição</th>
               {showResponsibility && <th>{responsibilityHeader} · IBID</th>}
+              <th>Fonte</th>
             </tr>
           </thead>
           <tbody>
@@ -635,8 +636,8 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
         <td>{scoreCell(row.clp)}</td>
         {/* A descrição dos pilares na base é a do CLP (escala 0–100) e não vale para o IBID. */}
         <td className="detail-text-cell comparison-description-cell">—</td>
-        <td className="detail-text-cell comparison-source-cell" title={sources}>{sources}</td>
         {showResponsibility && <td className="detail-text-cell">—</td>}
+        <td className="detail-text-cell comparison-source-cell" title={sources}>{sources}</td>
       </tr>
       {isExpanded && childrenRows.map((child) => (
         <tr className="detail-row" key={child.id}>
@@ -653,8 +654,8 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
           <td>{scoreCell(child.ibid)}</td>
           <td>{scoreCell(child.clp)}</td>
           <DescriptionCell clp={child.clp} ibid={child.ibid} />
-          <td className="detail-text-cell comparison-source-cell" title={child.source}>{child.source}</td>
           {showResponsibility && <ResponsibilityCell responsibility={child.ibid?.responsibility} />}
+          <td className="detail-text-cell comparison-source-cell" title={child.source}>{child.source}</td>
         </tr>
       ))}
     </>
