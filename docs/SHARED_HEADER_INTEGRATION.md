@@ -58,7 +58,7 @@ O comando deve retornar seu usuário pessoal do GitHub. Use um PAT **classic** c
 Instale uma versão explícita para evitar alterações involuntárias:
 
 ```powershell
-npm install @sia-dedg/shared-ui@0.1.13 --save-exact
+npm install @sia-dedg/shared-ui@0.1.15 --save-exact
 ```
 
 O `package.json` ficará com:
@@ -66,7 +66,7 @@ O `package.json` ficará com:
 ```json
 {
   "dependencies": {
-    "@sia-dedg/shared-ui": "0.1.13"
+    "@sia-dedg/shared-ui": "0.1.15"
   }
 }
 ```
@@ -150,7 +150,7 @@ Se o novo projeto ainda não existir em `HeaderProjectId` e `SIA_PROJECTS`, prim
 Uma publicação nova não atualiza os consumidores automaticamente. Em cada projeto, execute:
 
 ```powershell
-npm install @sia-dedg/shared-ui@0.1.13 --save-exact
+npm install @sia-dedg/shared-ui@0.1.15 --save-exact
 npm run build
 ```
 
