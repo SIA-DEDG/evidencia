@@ -31,49 +31,72 @@ const statePillars = [
   'Ranking Geral',
 ]
 
-type HeroTileTone = 'base' | 'bright' | 'mid' | 'dark' | 'fade-bright' | 'fade-base' | 'fade-dark'
-
-const heroTileColors: Record<HeroTileTone, string> = {
-  base: '#034ea2',
-  bright: '#0b5db8',
-  mid: '#0a54a7',
-  dark: '#08478d',
-  'fade-bright': 'rgba(11, 93, 184, .4)',
-  'fade-base': 'rgba(3, 78, 162, .6)',
-  'fade-dark': 'rgba(8, 71, 141, .2)',
+interface HeroTile {
+  side: 'left' | 'right'
+  /** Distância até a borda do lado escolhido. */
+  offset: number
+  /** Posição vertical no hero de 400px; as duas fileiras de baixo ficam presas à base. */
+  top: number
+  color: string
 }
 
-const heroTileRows: Array<Array<HeroTileTone | null>> = [
-  ['base', 'base', 'mid', 'dark', 'base', 'base', 'base', 'base', 'dark', 'base', 'base', 'base', 'base', null, null, 'fade-base'],
-  ['bright', 'base', 'mid', 'base', 'base', 'base', 'bright', 'base', 'base', 'base', 'base', 'bright', null, null, 'fade-bright'],
-  ['base', 'dark', 'base', 'base', 'dark', 'base', 'base', 'base', 'base', 'base', 'base', 'base', 'base', null, 'fade-base', 'fade-dark'],
-  ['dark', 'base', 'base', 'base', 'base', 'dark', 'base', 'base', 'bright', 'base', 'base', null, null, null, null, null, 'fade-base'],
-  ['base', 'base', 'base', 'dark', 'base', 'base', 'bright', 'base', 'base', 'base', 'base', 'base', null, null, 'fade-base'],
+const heroTiles: HeroTile[] = [
+  { side: 'left', offset: 0, top: 0, color: '#eef4fc' },
+  { side: 'left', offset: 80, top: 0, color: '#e3eefa' },
+  { side: 'left', offset: 240, top: 0, color: '#eef4fc' },
+  { side: 'left', offset: 560, top: 0, color: '#eef4fc' },
+  { side: 'left', offset: 0, top: 80, color: '#e3eefa' },
+  { side: 'left', offset: 0, top: 240, color: '#eef4fc' },
+  { side: 'left', offset: 0, top: 320, color: 'rgba(3, 78, 162, .8)' },
+  { side: 'left', offset: 80, top: 320, color: '#c9ddf4' },
+  { side: 'left', offset: 160, top: 320, color: '#e3eefa' },
+  { side: 'left', offset: 400, top: 320, color: '#eef4fc' },
+  { side: 'left', offset: 640, top: 320, color: '#e3eefa' },
+  { side: 'right', offset: 0, top: 0, color: '#034ea2' },
+  { side: 'right', offset: 160, top: 0, color: '#e3eefa' },
+  { side: 'right', offset: 320, top: 0, color: '#c9ddf4' },
+  { side: 'right', offset: 0, top: 80, color: '#c9ddf4' },
+  { side: 'right', offset: 400, top: 80, color: '#034ea2' },
+  { side: 'right', offset: 480, top: 160, color: '#e3eefa' },
+  { side: 'right', offset: 0, top: 240, color: '#0b5db8' },
+  { side: 'right', offset: 320, top: 240, color: '#e3eefa' },
+  { side: 'right', offset: 480, top: 240, color: '#c9ddf4' },
+  { side: 'right', offset: 0, top: 320, color: '#034ea2' },
+  { side: 'right', offset: 80, top: 320, color: '#c9ddf4' },
+  { side: 'right', offset: 320, top: 320, color: '#c9ddf4' },
+  { side: 'right', offset: 400, top: 320, color: '#08478d' },
 ]
 
-function getHeroExtensionTone(columnIndex: number, rowIndex: number): HeroTileTone {
-  const variation = Math.abs((columnIndex * 7) + (rowIndex * 11) + (columnIndex * rowIndex * 3)) % 17
+/** Vértices da linha do cartão "Série histórica", relativos ao cartão. */
+const historyPoints = [
+  [17.3, 81.1],
+  [30.1, 57.9],
+  [42.9, 71.1],
+  [55.8, 103.2],
+  [68.4, 76.6],
+  [81.2, 82.3],
+  [94.1, 90.1],
+  [106.9, 74.5],
+  [119.5, 90.1],
+  [132.4, 58.8],
+] as const
 
-  if (variation === 0 || variation === 11) return 'bright'
-  if (variation === 3 || variation === 8 || variation === 14) return 'dark'
-  if (variation === 5 || variation === 15) return 'mid'
-  return 'base'
-}
-
-const heroLeftExtensionTiles = Array.from({ length: 80 }, (_, columnOffset) => {
-  const columnIndex = columnOffset - 80
-  return Array.from({ length: 5 }, (_, rowIndex) => ({
-    columnIndex,
-    rowIndex,
-    tone: getHeroExtensionTone(columnIndex, rowIndex),
-  }))
-}).flat()
-
-const heroTiles = [
-  ...heroLeftExtensionTiles,
-  ...heroTileRows.flatMap((row, rowIndex) => row.flatMap((tone, columnIndex) => (
-    tone ? [{ columnIndex, rowIndex, tone }] : []
-  ))),
+const purposeHighlights = [
+  {
+    title: 'Dois estudos',
+    icon: '/assets/purpose-studies.svg',
+    text: 'IBID (INPI) e CLP avaliam os estados sob óticas complementares: instituições, capital humano, infraestrutura, economia, negócios e conhecimento.',
+  },
+  {
+    title: 'Comparação livre',
+    icon: '/assets/purpose-comparison.svg',
+    text: 'Escolha qualquer estado e compare com outro estado e com a média da sua região — em ranking, pontuação, série histórica, pilar, dimensão e indicador.',
+  },
+  {
+    title: 'Cobertura',
+    icon: '/assets/purpose-coverage.svg',
+    text: '27 unidades federativas + 5 regiões. Recorte municipal na base CLP. Série histórica: IBID 2015 e 2025 · CLP 2015–2025.',
+  },
 ]
 
 type AssistantTileTone = 'base' | 'dark' | 'faint'
@@ -106,6 +129,7 @@ function Definition({ label, children }: { label: string; children: React.ReactN
 
 export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, onOpenChat }: AboutPageProps) {
   const studiesRef = useRef<HTMLDivElement>(null)
+  const studiesTitleRef = useRef<HTMLHeadingElement>(null)
   const [activeStudy, setActiveStudy] = useState(0)
   const assistantRef = useRef<HTMLElement>(null)
 
@@ -119,6 +143,13 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
       onAssistantVisibilityChange(false)
     }
   }, [onAssistantVisibilityChange])
+
+  const scrollToStudies = () => {
+    const title = studiesTitleRef.current
+    if (!title) return
+    title.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    title.focus({ preventScroll: true })
+  }
 
   const scrollToStudy = (index: number) => {
     const carousel = studiesRef.current
@@ -144,63 +175,43 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
 
   return (
     <main className="home-page">
-      <section className="home-hero" data-node-id="2474:3205">
-        <img
-          alt=""
-          aria-hidden="true"
-          className="home-hero-background"
-          height="400"
-          src="/assets/home-hero-background.svg"
-          width="1440"
-        />
+      <section className="home-hero" aria-labelledby="home-title" data-node-id="2568:2236">
         <div aria-hidden="true" className="home-hero-tiles">
-          {heroTiles.map(({ columnIndex, rowIndex, tone }) => (
+          {heroTiles.map(({ side, offset, top, color }) => (
             <span
-              className="home-hero-tile"
-              key={`${columnIndex}-${rowIndex}`}
+              className={`home-hero-tile home-hero-tile-${side}`}
+              key={`${side}-${offset}-${top}`}
               style={{
-                backgroundColor: heroTileColors[tone],
-                left: columnIndex * 80,
-                top: rowIndex === 3 && columnIndex === 16 ? 239 : rowIndex * 80,
+                backgroundColor: color,
+                [side]: offset,
+                ...(top >= 240 ? { bottom: 320 - top } : { top }),
               }}
             />
           ))}
         </div>
-        <div aria-hidden="true" className="home-hero-shade" />
 
         <div className="home-hero-inner">
           <div className="home-hero-copy">
-            <p className="home-eyebrow">Propósito do painel</p>
-            <h1>
-              Acompanhar, de forma contínua e comparável, a posição do Piauí nos principais índices de{' '}
-              <span className="home-highlight home-highlight-short">
-                inovação
-                <img alt="" aria-hidden="true" height="6" src="/assets/home-accent-line.svg" width="137" />
-              </span>{' '}
-              e{' '}
-              <span className="home-highlight home-highlight-long">
-                competitividade
-                <img alt="" aria-hidden="true" height="8" src="/assets/home-title-underline.svg" width="247" />
-              </span>{' '}
-              do país.
-            </h1>
-            <p className="home-hero-description">
-              Este painel reúne dois estudos independentes — IBID, CLP — que avaliam os estados brasileiros sob óticas
-              complementares: instituições, capital humano, infraestrutura, economia, negócios, conhecimento,
-              competitividade estadual/municipal. Em cada aba é possível escolher qualquer estado e compará-lo com
-              qualquer outro estado e com a média da região à qual ele pertence — em ranking, pontuação, série histórica,
-              pilar, dimensão e indicador.
+            <h1 id="home-title">Evidenc<span>IA</span> Inovação</h1>
+            <p>
+              Painel de evidências que acompanha o desempenho do Piauí nos índices de inovação e competitividade,
+              reunindo dados do IBID e do CLP para comparar estados, regiões e municípios. Ficou com dúvida?
+              O <strong>Edson</strong>, nosso assistente, explica os índices em linguagem simples.
             </p>
-            <div className="home-facts" aria-label="Resumo de cobertura do painel">
-              <div className="home-facts-row">
-                <span>Cobertura: 27 unidades federativas + 5 regiões</span>
-                <b aria-hidden="true">·</b>
-                <span>Recorte municipal: disponível na base CLP</span>
-              </div>
-              <div className="home-facts-row">
-                <b aria-hidden="true">·</b>
-                <span>Série histórica: IBID 2015 e 2025 · CLP 2015–2025</span>
-              </div>
+            <div className="home-hero-actions">
+              <button className="home-hero-action-primary" onClick={scrollToStudies} type="button">
+                Explorar os índices
+              </button>
+              <button
+                aria-controls="edson-chat"
+                aria-expanded={chatOpen}
+                aria-haspopup="dialog"
+                className="home-hero-action-secondary"
+                onClick={(event) => onOpenChat(event.currentTarget)}
+                type="button"
+              >
+                Converse com o Edson
+              </button>
             </div>
           </div>
 
@@ -212,8 +223,23 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
               width="211"
             />
             <div className="home-history-card">
-              <strong>Atualização anual</strong>
-              <img alt="" height="47" src="/assets/home-history-chart.svg" width="117" />
+              <strong>Série histórica</strong>
+              <span className="home-history-badge">
+                <img alt="" height="9" src="/assets/home-history-calendar.svg" width="9" />
+                Atualização anual
+              </span>
+              <img alt="" className="home-history-line" height="47" src="/assets/home-history-chart.svg" width="117" />
+              {historyPoints.map(([left, top]) => (
+                <img
+                  alt=""
+                  className="home-history-point"
+                  height="4.3"
+                  key={left}
+                  src="/assets/home-history-point.svg"
+                  style={{ left, top }}
+                  width="4.3"
+                />
+              ))}
               <span className="home-history-year home-history-year-start">2015</span>
               <span className="home-history-year home-history-year-end">2026</span>
             </div>
@@ -230,13 +256,42 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
         </div>
       </section>
 
-      <section className="home-studies" aria-labelledby="studies-title" data-node-id="2474:3400">
+      <section className="home-purpose" aria-labelledby="purpose-title" data-node-id="2568:2395">
+        <header className="home-purpose-heading">
+          <p>Propósito do painel</p>
+          <h2 id="purpose-title">
+            Acompanhar, de forma contínua e comparável, a posição do Piauí nos principais índices de{' '}
+            <span>inovação</span> e <span>competitividade</span> do país.
+          </h2>
+          <p>
+            Dois estudos independentes, lidos lado a lado, para mostrar onde o estado avança, onde perde posição e como
+            se compara ao Brasil e à sua região.
+          </p>
+        </header>
+
+        <ul className="home-purpose-highlights">
+          {purposeHighlights.map(({ title, icon, text }) => (
+            <li key={title}>
+              <span aria-hidden="true" className="home-purpose-tiles">
+                <span /><span /><span /><span /><span /><span /><span /><span />
+              </span>
+              <span className="home-purpose-icon">
+                <img alt="" aria-hidden="true" height="22" src={icon} width="22" />
+              </span>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="home-studies" aria-labelledby="studies-title" data-node-id="2568:2463">
         <div aria-hidden="true" className="home-studies-decoration">
           <span /><span /><span /><span /><span /><span /><span /><span /><span /><span /><span />
         </div>
         <div className="home-studies-inner">
           <header className="home-studies-heading">
-            <h2 id="studies-title">Índices</h2>
+            <h2 id="studies-title" ref={studiesTitleRef} tabIndex={-1}>Índices</h2>
             <p>Estrutura hierárquica de cada estudo, conforme metodologia divulgada por cada instituição responsável.</p>
           </header>
 
@@ -248,7 +303,7 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
             role="region"
             tabIndex={0}
           >
-            <article className="home-study-card home-study-card-ibid" data-node-id="2474:3406">
+            <article className="home-study-card home-study-card-ibid" data-node-id="2568:2469">
               <header className="home-study-card-header">
                 <button className="home-study-title" onClick={() => onNavigate('ibid')} type="button">
                   <strong>IBID</strong>
@@ -266,10 +321,14 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
                 <Definition label="Geral">Nota IBID</Definition>
                 <div className="study-inline-row">
                   <Definition label="Grupo">2 grupos</Definition>
-                  <div className="study-tags">
-                    <span className="study-tag study-tag-blue">Contexto</span>
-                    <span className="study-tag study-tag-green">Resultado</span>
-                  </div>
+                  <span className="study-legend-item study-legend-blue">
+                    <img alt="" aria-hidden="true" height="6" src="/assets/study-dot-context.svg" width="6" />
+                    Contexto
+                  </span>
+                  <span className="study-legend-item study-legend-green">
+                    <img alt="" aria-hidden="true" height="6" src="/assets/study-dot-result.svg" width="6" />
+                    Resultado
+                  </span>
                 </div>
                 <div className="study-detail-group">
                   <Definition label="Pilar">7 pilares</Definition>
@@ -288,7 +347,7 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
                 <Definition label="Atualização">Anual</Definition>
                 <button className="home-study-dashboard-link" onClick={() => onNavigate('ibid')} type="button">
                   Ir para o painel IBID
-                  <img alt="" aria-hidden="true" height="16" src="/assets/assistant-arrow.svg" width="16" />
+                  <img alt="" aria-hidden="true" height="18" src="/assets/study-button-arrow.svg" width="18" />
                 </button>
                 <a
                   className="study-external-link"
@@ -302,7 +361,7 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
               </div>
             </article>
 
-            <article className="home-study-card home-study-card-clp" data-node-id="2474:3452">
+            <article className="home-study-card home-study-card-clp" data-node-id="2568:2516">
               <header className="home-study-card-header">
                 <button className="home-study-title" onClick={() => onNavigate('clp-estados')} type="button">
                   <strong>CLP</strong>
@@ -348,7 +407,7 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
                 <Definition label="Atualização">Anual</Definition>
                 <button className="home-study-dashboard-link" onClick={() => onNavigate('clp-estados')} type="button">
                   Ir para o painel CLP
-                  <img alt="" aria-hidden="true" height="16" src="/assets/assistant-arrow.svg" width="16" />
+                  <img alt="" aria-hidden="true" height="18" src="/assets/study-button-arrow.svg" width="18" />
                 </button>
                 <a
                   className="study-external-link"
@@ -397,7 +456,7 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
         </div>
       </section>
 
-      <section className="home-assistant" aria-labelledby="assistant-title" data-node-id="2474:3529" ref={assistantRef}>
+      <section className="home-assistant" aria-labelledby="assistant-title" data-node-id="2568:2593" ref={assistantRef}>
         <div aria-hidden="true" className="home-assistant-grid">
           <span /><span /><span /><span /><span /><span /><span /><span />
           {assistantExtensionTiles.map(({ columnIndex, rowIndex, tone }) => (
