@@ -21,7 +21,7 @@ interface HeaderSearchDependencies {
 const sections = [
   {
     id: 'sobre',
-    label: 'Sobre o Painel',
+    label: 'Início',
     description: 'Apresentação dos índices e fontes',
     keywords: 'sobre painel início estudos fontes',
   },

@@ -20,7 +20,7 @@ interface HeaderIntegrationProps {
 }
 
 const navigationItems: readonly HeaderNavigationItem[] = [
-  { id: 'sobre', label: 'Sobre o Painel' },
+  { id: 'sobre', label: 'Início' },
   { id: 'ibid', label: 'IBID' },
   { id: 'clp-estados', label: 'CLP' },
   { id: 'comparativo', label: 'Comparativo' },
