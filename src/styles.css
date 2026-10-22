@@ -299,9 +299,11 @@
     line-height: 1.5;
   }
   .home-purpose-highlights {
-    display: flex;
+    display: grid;
     width: 100%;
     max-width: 1200px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 1px;
     margin: 0;
     overflow: hidden;
     border: 1px solid rgba(3, 78, 162, .12);
@@ -315,13 +317,20 @@
     position: relative;
     display: flex;
     min-width: 0;
-    flex: 1 1 0;
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
     padding: 0 28px;
   }
-  .home-purpose-highlights li + li { border-left: 1px solid rgba(3, 78, 162, .12); }
+  .home-purpose-highlights li + li::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -1px;
+    width: 1px;
+    background: rgba(3, 78, 162, .12);
+  }
   .home-purpose-icon {
     position: relative;
     display: flex;
@@ -336,7 +345,7 @@
     color: #012e66;
     font-size: 17px;
     font-weight: 700;
-    line-height: normal;
+    line-height: 21px;
   }
   .home-purpose-highlights li > p {
     position: relative;
@@ -346,14 +355,16 @@
     font-weight: 400;
     line-height: 1.5;
   }
+  /* Os quadradinhos encostam no topo do cartão e no divisor; em Cobertura, avançam até a borda direita do cartão. */
   .home-purpose-tiles {
     position: absolute;
-    top: -30px;
+    top: -29px;
     right: 0;
     width: 88px;
     height: 110px;
     pointer-events: none;
   }
+  .home-purpose-highlights li:last-child .home-purpose-tiles { right: -8px; }
   .home-purpose-tiles span {
     position: absolute;
     width: 22px;
@@ -1205,11 +1216,12 @@
 }
 
 @media (max-width: 960px) {
-  .home-purpose-highlights { flex-direction: column; gap: 24px; padding: 24px 0; }
+  .home-purpose-highlights { grid-template-columns: minmax(0, 1fr); row-gap: 24px; padding: 24px 0; }
   .home-purpose-highlights li { padding: 0 24px; }
-  .home-purpose-highlights li + li { border-left: 0; border-top: 1px solid rgba(3, 78, 162, .12); padding-top: 24px; }
-  .home-purpose-highlights li + li .home-purpose-tiles { top: 0; }
-  .home-purpose-highlights li:first-child .home-purpose-tiles { top: -24px; }
+  .home-purpose-highlights li + li { padding-top: 24px; }
+  .home-purpose-highlights li + li::before { right: 0; bottom: auto; left: 0; width: auto; height: 1px; }
+  .home-purpose-highlights li:nth-child(n) .home-purpose-tiles { top: 0; right: 0; }
+  .home-purpose-highlights li:first-child .home-purpose-tiles { top: -25px; }
   .home-studies-decoration { opacity: .65; }
 }
 
