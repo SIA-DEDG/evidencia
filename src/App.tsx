@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { SiaFooter } from '@sia-dedg/shared-ui'
 import { AboutPage } from './components/AboutPage'
 import { ComparisonPage } from './components/ComparisonPage'
 import { DashboardPage } from './components/DashboardPage'
@@ -281,11 +282,9 @@ export default function App() {
           {error && <div className="page-shell pt-0 text-sm text-red-700" role="alert">{error}</div>}
         </div>
       )}
-      {page !== 'sobre' && (
-        <footer className="mt-14 border-t border-line px-5 py-6 text-center text-xs text-muted dark:border-slate-800 dark:text-slate-400">
-          © 2026 Secretaria de Inteligência Artificial, Economia Digital, Ciência, Tecnologia e Inovação — SIA
-        </footer>
-      )}
+      <div className={page === 'sobre' ? undefined : 'mt-14'}>
+        <SiaFooter />
+      </div>
       <button
         aria-controls="edson-chat"
         aria-expanded={chatOpen}

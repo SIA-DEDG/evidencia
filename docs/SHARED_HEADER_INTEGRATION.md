@@ -58,7 +58,7 @@ O comando deve retornar seu usuário pessoal do GitHub. Use um PAT **classic** c
 Instale uma versão explícita para evitar alterações involuntárias:
 
 ```powershell
-npm install @sia-dedg/shared-ui@0.1.15 --save-exact
+npm install @sia-dedg/shared-ui@0.1.16 --save-exact
 ```
 
 O `package.json` ficará com:
@@ -66,7 +66,7 @@ O `package.json` ficará com:
 ```json
 {
   "dependencies": {
-    "@sia-dedg/shared-ui": "0.1.15"
+    "@sia-dedg/shared-ui": "0.1.16"
   }
 }
 ```
@@ -77,7 +77,7 @@ O `package-lock.json` gerado deve ser commitado.
 
 - `src/components/HeaderIntegration.tsx`: traduz o estado e as rotas do sistema para as propriedades públicas de `SiaHeader`.
 - `src/data/headerSearchAdapter.ts`: adapta a busca por páginas e a busca inteligente existente para `HeaderSearchAdapter`.
-- `src/App.tsx`: renderiza `HeaderIntegration` no lugar do header local.
+- `src/App.tsx`: renderiza `HeaderIntegration` no lugar do header local e `SiaFooter` (desde a v0.1.16) ao fim de todas as páginas. O rodapé não recebe propriedades: logo, contatos e links são institucionais e vêm da biblioteca.
 - `.npmrc`: direciona somente o escopo `@sia-dedg` para o GitHub Packages.
 
 O antigo `src/components/Header.tsx` foi preservado temporariamente para facilitar comparação e eventual rollback. Depois da homologação, ele e as classes CSS exclusivas dele podem ser removidos em uma alteração separada.
@@ -150,7 +150,7 @@ Se o novo projeto ainda não existir em `HeaderProjectId` e `SIA_PROJECTS`, prim
 Uma publicação nova não atualiza os consumidores automaticamente. Em cada projeto, execute:
 
 ```powershell
-npm install @sia-dedg/shared-ui@0.1.15 --save-exact
+npm install @sia-dedg/shared-ui@0.1.16 --save-exact
 npm run build
 ```
 
