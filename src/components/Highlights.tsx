@@ -1,302 +1,209 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
-import type { DashboardKind, HighlightDirection, HighlightGroup, HighlightItem } from '../types/dashboard'
+import { useEffect, useId, useMemo, useState } from 'react'
+import {
+  BookOpen,
+  Briefcase,
+  ChartColumn,
+  ChevronDown,
+  Coins,
+  HeartPulse,
+  Landmark,
+  Leaf,
+  Lightbulb,
+  Medal,
+  Palette,
+  Route,
+  Shield,
+  TrendingDown,
+  TrendingUp,
+  Trophy,
+  User,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
+import type { HighlightGroup, HighlightItem } from '../types/dashboard'
 
-interface HighlightsProps {
-  groups: HighlightGroup[]
-  kind: DashboardKind
-  primaryName: string
+export type HighlightLevel = 'geral' | 'pilar' | 'dimensao' | 'indicador'
+export type HighlightStudy = 'IBID' | 'CLP'
+
+export interface HighlightCounterpart {
+  study: HighlightStudy
+  title: string
+  change: number
+  topTier?: HighlightItem['topTier']
+  topStatus?: HighlightItem['topStatus']
 }
 
-const collapsedItemsPerColumn = 3
-
-interface HighlightMacro {
-  id: string
-  label: string
-  indicators: HighlightItem[]
-  pillars: HighlightItem[]
+/** Uma mudança grande pronta para a faixa de destaques. */
+export interface BandHighlight extends HighlightItem {
+  level: HighlightLevel
+  study?: HighlightStudy
+  counterpart?: HighlightCounterpart
 }
 
-function rowsOfIndicators(items: HighlightItem[]) {
-  return Array.from(
-    { length: Math.ceil(items.length / 4) },
-    (_, index) => items.slice(index * 4, index * 4 + 4),
+const visibleCount = 3
+
+const levelOrder: Record<HighlightLevel, number> = { geral: 0, pilar: 1, dimensao: 2, indicador: 3 }
+const levelLabels: Array<[HighlightLevel, string]> = [
+  ['geral', 'Nota geral'],
+  ['pilar', 'Pilares'],
+  ['dimensao', 'Dimensões'],
+  ['indicador', 'Indicadores'],
+]
+
+const iconRules: Array<[RegExp, LucideIcon]> = [
+  [/nota geral/i, Trophy],
+  [/instituiç|máquina|funcionamento|transparência|administrativ/i, Landmark],
+  [/educaç|ensino|escolar|frequência/i, BookOpen],
+  [/capital humano|qualificação|escolaridade|trabalhador/i, User],
+  [/fiscal|investimento|pib|inadimpl|custo|economia(?! criativa)/i, Coins],
+  [/conhecimento|tecnolog|inovaç|telecom|4g|digital|dinamismo/i, Lightbulb],
+  [/infraestrutura|rodovia|saneamento|lixo/i, Route],
+  [/negócio|mercado|empresa|emprego|inserção/i, Briefcase],
+  [/criativ|cultura/i, Palette],
+  [/saúde|mortalidade/i, HeartPulse],
+  [/segurança/i, Shield],
+  [/social/i, Users],
+  [/ambient|áreas recuperadas|meio ambiente/i, Leaf],
+]
+
+function iconFor(item: BandHighlight) {
+  const subject = item.level === 'geral' ? 'nota geral' : item.level === 'pilar' ? item.title : item.pillarTitle ?? item.title
+  return iconRules.find(([pattern]) => pattern.test(subject))?.[1] ?? ChartColumn
+}
+
+function kindLabel(item: BandHighlight) {
+  if (item.level === 'geral') return 'Nota geral'
+  if (item.level === 'pilar') return 'Pilar'
+  const label = item.level === 'dimensao' ? 'Dimensão' : 'Indicador'
+  return item.pillarTitle ? `${label} · ${item.pillarTitle}` : label
+}
+
+const positions = (count: number) => `${count} ${count === 1 ? 'posição' : 'posições'}`
+
+/** Visão rápida: nota geral, depois quem entrou no topo, depois as maiores variações; indicadores por último. */
+export function prioritizeHighlights(items: BandHighlight[]) {
+  const weight = (item: BandHighlight) => levelOrder[item.level] * 10000
+    - (item.topStatus === 'entered' ? 5000 : 0)
+    - Math.abs(item.change)
+  return [...items].sort((a, b) => weight(a) - weight(b))
+}
+
+export function highlightsFromGroups(groups: HighlightGroup[]): BandHighlight[] {
+  return groups.flatMap((group) => group.items.map((item) => ({
+    ...item,
+    level: (group.id in levelOrder ? group.id : 'indicador') as HighlightLevel,
+  })))
+}
+
+function TopChip({ topTier, topStatus }: Pick<HighlightItem, 'topTier' | 'topStatus'>) {
+  if (!topTier) return null
+  return (
+    <span className="band-chip band-chip-top">
+      <Medal aria-hidden="true" size={12} />
+      {topStatus === 'entered' ? 'Entrou no' : 'Segue no'} top {topTier}
+    </span>
   )
 }
 
-function MovementIcon({ direction }: { direction: HighlightDirection }) {
-  return (
-    <img
-      alt=""
-      aria-hidden="true"
-      className="highlight-icon"
-      height={26}
-      src={`/assets/highlight-${direction === 'stable' ? 'equal' : direction}.svg`}
-      width={26}
-    />
-  )
+function ChangeChip({ change }: { change: number }) {
+  if (change > 0) return <span className="band-chip band-chip-up"><TrendingUp aria-hidden="true" size={12} />{positions(change)}</span>
+  if (change < 0) return <span className="band-chip band-chip-down"><TrendingDown aria-hidden="true" size={12} />{positions(-change)}</span>
+  return null
 }
 
-export function HighlightCard({ item, primaryName, showTitle = true }: { item: HighlightItem; primaryName: string; showTitle?: boolean }) {
-  const rankingTrail = `${item.previousPosition}º (${item.previousYear}) → ${item.currentPosition}º (${item.year})`
-  const badge = item.change === 0
-    ? `${item.currentPosition}º`
-    : `${item.change > 0 ? '+' : ''}${item.change}`
+function CounterpartLine({ counterpart }: { counterpart: HighlightCounterpart }) {
+  const movement = counterpart.change > 0
+    ? `subiu ${positions(counterpart.change)}`
+    : counterpart.change < 0 ? `caiu ${positions(-counterpart.change)}` : 'segue'
+  const top = counterpart.topTier
+    ? ` e ${counterpart.topStatus === 'entered' ? 'entrou no' : 'segue no'} top ${counterpart.topTier}`
+    : ''
+  return <p className="band-move-pair">No {counterpart.study}, <strong>{counterpart.title}</strong> {movement}{top}</p>
+}
 
+function MoveCard({ item }: { item: BandHighlight }) {
+  const Icon = iconFor(item)
   return (
-    <article className="highlight-card">
-      <MovementIcon direction={item.direction} />
-      <div className="highlight-card-copy">
-        {showTitle && <h3>{item.title}</h3>}
-        <p>
-          {primaryName}{' '}
-          {item.change !== 0 && (
-            <>
-              {item.change > 0 ? 'subiu ' : 'caiu '}
-              <span className={`highlight-movement-${item.direction}`}>
-                {Math.abs(item.change)} {Math.abs(item.change) === 1 ? 'posição' : 'posições'}
-              </span>
-              {item.topTier ? ' e ' : ' '}
-            </>
-          )}
-          {item.topTier && (
-            <>
-              {item.topStatus === 'entered' ? 'entrou para o ' : 'segue no '}
-              <span className={item.direction === 'stable' ? 'highlight-top-stable' : ''}>top {item.topTier}</span>{' '}
-            </>
-          )}
-          no ranking Brasil · {rankingTrail}
-        </p>
+    <article className="band-move">
+      <div className="band-move-rank">
+        <strong>{item.currentPosition}º</strong>
+        <span>no Brasil</span>
       </div>
-      <strong className={`highlight-badge highlight-badge-${item.direction}`}>{badge}</strong>
+      <div className="band-move-body">
+        <p className="band-move-kind">
+          <Icon aria-hidden="true" size={14} />
+          {item.study && <b>{item.study}</b>}
+          <span>{kindLabel(item)}</span>
+        </p>
+        <h3>{item.title}</h3>
+        <div className="band-move-chips">
+          <ChangeChip change={item.change} />
+          <TopChip topStatus={item.topStatus} topTier={item.topTier} />
+          {item.change !== 0 && <span className="band-move-was">era {item.previousPosition}º</span>}
+        </div>
+        {item.counterpart && <CounterpartLine counterpart={item.counterpart} />}
+      </div>
     </article>
   )
 }
 
-export function Highlights({ groups, kind, primaryName }: HighlightsProps) {
+/** Faixa de destaques do topo das abas: as mudanças grandes do ano, com as principais à mostra. */
+export function HighlightsBand({ items, place, year }: { items: BandHighlight[]; place: string; year: number }) {
+  const id = useId()
   const [expanded, setExpanded] = useState(false)
-  const [expandedPillars, setExpandedPillars] = useState<Set<string>>(() => new Set())
-  const studyName = kind === 'ibid' ? 'IBID' : 'CLP'
-  const usesPillarLayout = kind.startsWith('clp')
+  const ordered = useMemo(() => prioritizeHighlights(items), [items])
 
-  useEffect(() => {
-    setExpanded(false)
-    setExpandedPillars(new Set())
-  }, [groups, kind, primaryName])
+  useEffect(() => setExpanded(false), [items])
 
-  function togglePillar(pillarId: string) {
-    setExpandedPillars((current) => {
-      const next = new Set(current)
-      if (next.has(pillarId)) next.delete(pillarId)
-      else next.add(pillarId)
-      return next
-    })
-  }
+  if (!ordered.length) return null
 
-  const { indicatorGroups, structuralGroups, hasHiddenItems } = useMemo(() => {
-    const allStructural = groups.filter((group) => group.id !== 'indicador')
-    const allIndicators = groups.filter((group) => group.id === 'indicador')
-
-    if (usesPillarLayout) {
-      return {
-        structuralGroups: allStructural,
-        indicatorGroups: allIndicators,
-        hasHiddenItems: false,
-      }
-    }
-
-    const structuralLimit = kind === 'ibid' && allIndicators.length === 0
-      ? collapsedItemsPerColumn * 2
-      : collapsedItemsPerColumn
-
-    const limitColumn = (columnGroups: HighlightGroup[], limit: number) => {
-      if (expanded) return columnGroups
-      let remaining = limit
-      return columnGroups.flatMap((group) => {
-        if (remaining === 0) return []
-        const items = group.items.slice(0, remaining)
-        remaining -= items.length
-        return items.length ? [{ ...group, items }] : []
-      })
-    }
-
-    return {
-      structuralGroups: limitColumn(allStructural, structuralLimit),
-      indicatorGroups: limitColumn(allIndicators, collapsedItemsPerColumn),
-      hasHiddenItems: allStructural.reduce((total, group) => total + group.items.length, 0) > structuralLimit
-        || allIndicators.reduce((total, group) => total + group.items.length, 0) > collapsedItemsPerColumn,
-    }
-  }, [expanded, groups, kind, usesPillarLayout])
-  const { macros, standaloneGroups } = useMemo(() => {
-    const macroMap = new Map<string, HighlightMacro>()
-    const pillarGroups = structuralGroups.filter((group) => group.id === 'pilar')
-
-    const ensureMacro = (item: HighlightItem) => {
-      const id = item.pillarId ?? 'unassigned'
-      const existing = macroMap.get(id)
-      if (existing) return existing
-
-      const macro: HighlightMacro = {
-        id,
-        label: item.pillarTitle ?? 'Outros indicadores',
-        indicators: [],
-        pillars: [],
-      }
-      macroMap.set(id, macro)
-      return macro
-    }
-
-    pillarGroups.forEach((group) => {
-      group.items.forEach((item) => ensureMacro(item).pillars.push(item))
-    })
-    indicatorGroups.forEach((group) => {
-      group.items.forEach((item) => ensureMacro(item).indicators.push(item))
-    })
-
-    return {
-      macros: [...macroMap.values()],
-      standaloneGroups: structuralGroups.filter((group) => group.id !== 'pilar'),
-    }
-  }, [indicatorGroups, structuralGroups])
-  const visibleMacros = expanded ? macros : macros.slice(0, collapsedItemsPerColumn)
-  const shouldShowToggle = usesPillarLayout ? macros.length > collapsedItemsPerColumn : hasHiddenItems
-  const expandableMacroIds = macros.filter((macro) => macro.indicators.length > 0).map((macro) => macro.id)
-  const allPillarsExpanded = expandableMacroIds.length > 0
-    && expandableMacroIds.every((id) => expandedPillars.has(id))
-
-  function toggleAllPillars() {
-    if (allPillarsExpanded) {
-      // Compactar tudo também recolhe a lista, como "Ver menos destaques".
-      setExpandedPillars(new Set())
-      setExpanded(false)
-      return
-    }
-
-    setExpanded(true)
-    setExpandedPillars(new Set(expandableMacroIds))
-  }
-
-  if (!groups.some((group) => group.items.length > 0)) return null
+  const ups = ordered.filter((item) => item.change > 0).length
+  const downs = ordered.filter((item) => item.change < 0).length
+  const tops = ordered.filter((item) => item.topTier).length
+  const groups = levelLabels
+    .map(([level, label]) => [label, ordered.filter((item) => item.level === level)] as const)
+    .filter(([, list]) => list.length)
 
   return (
-    <section className="highlights-panel" aria-labelledby="highlights-title">
-      <div className="highlights-heading">
-        <div className="highlights-heading-copy">
-          <h2 id="highlights-title">Destaques</h2>
-          <p>
-            Esta seção compara as posições de {primaryName} no {studyName} com o ano imediatamente anterior, segundo os seguintes critérios: variação de mais de 3 posições (subida ou queda) no ranking Brasil; entrada ou permanência entre os top 10, top 5 ou top 3 do ranking nacional.
-          </p>
+    <section aria-labelledby={`${id}-title`} className="highlights-band">
+      <div aria-hidden="true" className="highlights-band-pixels"><span /><span /><span /><span /></div>
+      <div className="highlights-band-side">
+        <p className="highlights-band-badge">Destaques {year}</p>
+        <h2 id={`${id}-title`}>O que mudou para <span>{place}</span></h2>
+        <p>Mudanças grandes no ranking Brasil, de {year - 1} para {year}.</p>
+        <div aria-label="Resumo dos destaques" className="highlights-band-summary">
+          {ups > 0 && <span className="band-chip band-chip-up"><TrendingUp aria-hidden="true" size={12} />{ups} {ups === 1 ? 'subiu' : 'subiram'}</span>}
+          {downs > 0 && <span className="band-chip band-chip-down"><TrendingDown aria-hidden="true" size={12} />{downs} {downs === 1 ? 'caiu' : 'caíram'}</span>}
+          {tops > 0 && <span className="band-chip band-chip-top"><Medal aria-hidden="true" size={12} />{tops} no topo</span>}
         </div>
-        {usesPillarLayout && expandableMacroIds.length > 0 && (
-          <button className="detail-expand-control highlights-expand-control" onClick={toggleAllPillars} type="button">
-            {allPillarsExpanded ? <ChevronsDownUp size={16} /> : <ChevronsUpDown size={16} />}
-            {allPillarsExpanded ? 'Compactar tudo' : 'Expandir tudo'}
+        <details className="highlights-band-criteria">
+          <summary>Como escolhemos</summary>
+          <p>Entram os itens que mudaram mais de 3 posições no ranking Brasil em relação ao ano anterior e os que entraram ou seguem entre os top 10, 5 ou 3.</p>
+        </details>
+        {ordered.length > visibleCount && (
+          <button aria-controls={`${id}-moves`} aria-expanded={expanded} className="highlights-band-toggle" onClick={() => setExpanded((value) => !value)} type="button">
+            {expanded ? 'Mostrar só os principais' : `Ver todos os ${ordered.length} destaques`}
+            <ChevronDown aria-hidden="true" className={expanded ? 'rotate-180' : ''} size={16} />
           </button>
         )}
       </div>
-
-      {usesPillarLayout ? (
-        <div className="highlight-macros" id="highlight-groups">
-          {standaloneGroups.map((group) => (
-            <div className="highlight-group" key={group.id}>
-              <h3>{group.label}</h3>
-              <div className="highlight-list">
-                {group.items.map((item) => <HighlightCard item={item} key={item.id} primaryName={primaryName} />)}
-              </div>
+      <div className="highlights-band-main" id={`${id}-moves`}>
+        {expanded
+          ? groups.map(([label, list]) => (
+            <div className="highlights-band-group" key={label}>
+              <h3>{label} · {list.length}</h3>
+              <div className="highlights-band-moves">{list.map((item) => <MoveCard item={item} key={`${item.study ?? ''}${item.id}`} />)}</div>
             </div>
-          ))}
-
-          {visibleMacros.map((macro) => {
-            const hasIndicators = macro.indicators.length > 0
-            const pillarExpanded = hasIndicators && expandedPillars.has(macro.id)
-            const contentId = `highlight-macro-content-${macro.id}`
-
-            return (
-              <section className="highlight-macro" key={macro.id}>
-                <button
-                  aria-controls={hasIndicators ? contentId : undefined}
-                  aria-expanded={hasIndicators ? pillarExpanded : undefined}
-                  className={`highlight-macro-toggle ${macro.pillars.length > 0 || (pillarExpanded && macro.indicators.length > 0) ? 'highlight-macro-toggle-spaced' : ''}`}
-                  disabled={!hasIndicators}
-                  onClick={() => togglePillar(macro.id)}
-                  type="button"
-                >
-                  <span className="highlight-macro-heading">
-                    <span>Pilar</span>
-                    <strong>{macro.label}</strong>
-                  </span>
-                  {hasIndicators && (
-                    <span className="highlight-macro-action">
-                      {pillarExpanded ? 'Ocultar indicadores' : 'Ver indicadores'}
-                      <img
-                        alt=""
-                        aria-hidden="true"
-                        className={pillarExpanded ? 'rotate-180' : '-rotate-90'}
-                        height={18}
-                        src={`/assets/highlight-chevron-${kind === 'clp-municipios' ? 'purple' : 'blue'}.svg`}
-                        width={18}
-                      />
-                    </span>
-                  )}
-                </button>
-
-                {macro.pillars.map((item) => (
-                  <div className={`highlight-macro-card ${pillarExpanded && macro.indicators.length > 0 ? '' : 'highlight-macro-card-last'}`} key={item.id}>
-                    <HighlightCard item={item} primaryName={primaryName} showTitle={false} />
-                  </div>
-                ))}
-
-                <div hidden={!pillarExpanded} id={contentId}>
-                  {macro.indicators.length > 0 && (
-                    <div>
-                      <h4 className="highlight-micro-heading">Indicadores</h4>
-                      <div className="highlight-micro-rows">
-                        {rowsOfIndicators(macro.indicators).map((row) => (
-                          <div className={`highlight-micro-grid highlight-micro-grid-${row.length}`} key={row[0].id}>
-                            {row.map((item) => <HighlightCard item={item} key={item.id} primaryName={primaryName} />)}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </section>
-            )
-          })}
-        </div>
-      ) : (
-        <div className={indicatorGroups.length ? 'highlight-groups' : 'highlight-groups highlight-groups-single'} id="highlight-groups">
-          <div className="highlight-column">
-            {structuralGroups.map((group) => (
-              <div className="highlight-group" key={group.id}>
-                <h3>{group.label}</h3>
-                <div className="highlight-list">
-                  {group.items.map((item) => <HighlightCard item={item} key={item.id} primaryName={primaryName} />)}
-                </div>
-              </div>
-            ))}
-          </div>
-          {indicatorGroups.length > 0 && (
-            <div className="highlight-column">
-              {indicatorGroups.map((group) => (
-                <div className="highlight-group" key={group.id}>
-                  <h3>{group.label}</h3>
-                  <div className="highlight-list">
-                    {group.items.map((item) => <HighlightCard item={item} key={item.id} primaryName={primaryName} />)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {shouldShowToggle && (
-        <button aria-controls="highlight-groups" aria-expanded={expanded} className="highlights-toggle" onClick={() => setExpanded((value) => !value)} type="button">
-          {expanded ? 'Ver menos destaques' : 'Ver mais destaques'}
-          <img alt="" aria-hidden="true" className={expanded ? 'rotate-180' : ''} height={16} src={`/assets/highlight-chevron-${kind === 'clp-municipios' ? 'purple' : 'blue'}.svg`} width={16} />
-        </button>
-      )}
+          ))
+          : <div className="highlights-band-moves">{ordered.slice(0, visibleCount).map((item) => <MoveCard item={item} key={`${item.study ?? ''}${item.id}`} />)}</div>}
+      </div>
     </section>
   )
+}
+
+export function Highlights({ groups, primaryName }: { groups: HighlightGroup[]; primaryName: string }) {
+  const items = useMemo(() => highlightsFromGroups(groups), [groups])
+  const year = items[0]?.year
+  if (!year) return null
+  return <HighlightsBand items={items} place={primaryName} year={year} />
 }

@@ -4,7 +4,6 @@ export default {
   darkMode: 'class',
   safelist: [
     'dashboard-ibid', 'dashboard-clp-estados', 'dashboard-clp-municipios',
-    ...['up', 'down', 'stable'].flatMap((direction) => [`highlight-movement-${direction}`, `highlight-badge-${direction}`]),
     ...[0, 1, 2, 3].flatMap((depth) => [`detail-row-depth-${depth}`, `detail-mobile-table-row-depth-${depth}`]),
   ],
   theme: {
