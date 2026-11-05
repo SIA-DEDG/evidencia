@@ -4,5 +4,11 @@
     "api/dashboard.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/keep-alive",
+      "schedule": "0 12 */4 * *"
+    }
+  ]
 }
