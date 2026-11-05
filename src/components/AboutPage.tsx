@@ -1,12 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 type StudyPage = 'ibid' | 'clp-estados' | 'clp-municipios'
 
 interface AboutPageProps {
-  chatOpen: boolean
-  onAssistantVisibilityChange: (visible: boolean) => void
   onNavigate: (page: StudyPage) => void
-  onOpenChat: (trigger: HTMLButtonElement) => void
 }
 
 interface HeroTile {
@@ -222,22 +219,10 @@ function Badge({ children, icon, iconWidth, tone = 'light' }: { children: React.
   )
 }
 
-export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, onOpenChat }: AboutPageProps) {
+export function AboutPage({ onNavigate }: AboutPageProps) {
   const studiesRef = useRef<HTMLDivElement>(null)
   const studiesTitleRef = useRef<HTMLHeadingElement>(null)
   const [activeStudy, setActiveStudy] = useState(0)
-  const assistantRef = useRef<HTMLElement>(null)
-
-  useEffect(() => {
-    const section = assistantRef.current
-    if (!section) return
-    const observer = new IntersectionObserver(([entry]) => onAssistantVisibilityChange(entry.isIntersecting))
-    observer.observe(section)
-    return () => {
-      observer.disconnect()
-      onAssistantVisibilityChange(false)
-    }
-  }, [onAssistantVisibilityChange])
 
   const scrollToStudies = () => {
     const title = studiesTitleRef.current
@@ -299,15 +284,16 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
               Explorar os índices
             </button>
             <button
-              aria-controls="edson-chat"
-              aria-expanded={chatOpen}
-              aria-haspopup="dialog"
+              aria-describedby="edson-unavailable-notice"
               className="home-hero-action-secondary"
-              onClick={(event) => onOpenChat(event.currentTarget)}
+              disabled
               type="button"
             >
               Converse com o Edson
             </button>
+          </div>
+          <div className="home-edson-unavailable" id="edson-unavailable-notice" role="status">
+            Edson está desativado no momento.
           </div>
         </div>
 
@@ -544,7 +530,7 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
         </div>
       </section>
 
-      <section className="home-assistant" aria-labelledby="assistant-title" data-node-id="3019:1960" ref={assistantRef}>
+      <section className="home-assistant" aria-labelledby="assistant-title" data-node-id="3019:1960">
         <div aria-hidden="true" className="home-assistant-grid">
           <span /><span /><span /><span /><span /><span /><span /><span />
           {assistantExtensionTiles.map(({ columnIndex, top, tone }) => (
@@ -570,9 +556,14 @@ export function AboutPage({ chatOpen, onAssistantVisibilityChange, onNavigate, o
                 entre estados e regiões, pilares, dimensões e indicadores do IBID e CLP em linguagem simples
               </p>
             </div>
-            <button aria-controls="edson-chat" aria-expanded={chatOpen} aria-haspopup="dialog" onClick={(event) => onOpenChat(event.currentTarget)} type="button">
-              Converse com o assistente Edson
-            </button>
+            <div className="home-assistant-actions">
+              <button aria-describedby="assistant-edson-unavailable" className="home-assistant-action" disabled type="button">
+                Converse com o assistente Edson
+              </button>
+              <p className="home-assistant-unavailable" id="assistant-edson-unavailable" role="status">
+                Edson está desativado no momento.
+              </p>
+            </div>
           </div>
           <img
             alt="Visualização abstrata do assistente Edson"
