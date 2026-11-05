@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DashboardDataset, InsightGroup } from '../types/dashboard'
+import { buildSphereBreakdown, filterDetailsBySphere } from '../data/responsibilitySpheres'
 import { BrazilMap } from './BrazilMap'
 import { DetailTable } from './DetailTable'
 import { FilterDrawer } from './FilterDrawer'
@@ -12,6 +13,7 @@ import { PositionChart } from './PositionChart'
 import { SeriesChart } from './SeriesChart'
 import { StateComparisonChart, type ComparisonRankingItem } from './StateComparisonChart'
 import { SummaryCards } from './SummaryCards'
+import { SphereDonutFilter } from './SphereDonutFilter'
 
 interface DashboardPageProps {
   data: DashboardDataset
@@ -34,6 +36,7 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
   const insightLevel = insightChoice.metric === metricValue ? insightChoice.level : data.metricLevel ?? 'Pilar'
   const setInsightLevel = (level: InsightGroup['level']) => setInsightChoice({ metric: metricValue, level })
   const [insightQuery, setInsightQuery] = useState('')
+  const [sphereFilter, setSphereFilter] = useState<string>()
   const primaryState = municipal ? undefined : data.filters.find((filter) => filter.id === 'primary')?.value
   const comparisonState = municipal ? undefined : data.filters.find((filter) => filter.id === 'comparison')?.value
   const hasComparisonRegion = hasComparison && data.chart.comparisonRegional.some((value) => value !== null)
@@ -50,6 +53,15 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
     .map((item, index) => ({ ...item, position: index + 1, detail: item.position ? `${item.position}º no Brasil` : undefined }))
 
   const insightGroups = data.insightGroups ?? []
+  const sphereBreakdown = useMemo(() => buildSphereBreakdown(data.details), [data.details])
+  const activeSphereFilter = sphereBreakdown.some((item) => item.name === sphereFilter) ? sphereFilter : undefined
+  const filteredDetails = useMemo(
+    () => filterDetailsBySphere(data.details, activeSphereFilter),
+    [activeSphereFilter, data.details],
+  )
+  useEffect(() => {
+    if (sphereFilter && !activeSphereFilter) setSphereFilter(undefined)
+  }, [activeSphereFilter, sphereFilter])
   // Mantém o nível escolhido entre recargas quando ele continua disponível; senão usa o primeiro.
   const activeInsightGroup = insightGroups.find((group) => group.level === insightLevel) ?? insightGroups[0]
   const insightChartProps: InsightChartProps | undefined = activeInsightGroup && {
@@ -100,7 +112,7 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
         )}
       </div>
 
-      <Highlights groups={data.highlights ?? []} kind={data.kind} primaryName={data.summary[0]?.title ?? ''} />
+      <Highlights groups={data.highlights ?? []} primaryName={data.summary[0]?.title ?? ''} />
 
       <div className="dashboard-filter-intro">
         <h2>{isClp ? `Painel Ranking de Competitividade dos ${municipal ? 'Municípios' : 'Estados'}` : 'Painel Índice Brasil de Inovação e Desenvolvimento'}</h2>
@@ -228,14 +240,20 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
           </div>
         </>
       )}
+      {sphereBreakdown.length > 0 && (
+        <div className="dashboard-results-panel sphere-filter-panel">
+          <SphereDonutFilter data={sphereBreakdown} onChange={setSphereFilter} selected={activeSphereFilter} />
+        </div>
+      )}
       <div className="dashboard-results-panel">
         <DetailTable
+          autoExpand={Boolean(activeSphereFilter)}
           comparisonLabel={comparisonLabel}
           comparisonRegionalLabel={comparisonRegionalLabel}
           kind={data.kind}
           primaryLabel={primaryLabel}
           primaryRegionalLabel={primaryRegionalLabel}
-          rows={data.details}
+          rows={filteredDetails}
           showComparison={hasComparisonRegion}
         />
       </div>

@@ -48,6 +48,7 @@ interface ComponentRow {
   nome: string
   parent_id: string | null
   ordem_exibicao: number | null
+  peso?: number | null
   descricao: string | null
   fonte: string | null
   unidade_medida: string | null
@@ -108,6 +109,14 @@ function scoreText(kind: DashboardKind, value: number | null | undefined) {
   return value.toLocaleString('pt-BR', {
     minimumFractionDigits: scoreDecimals(kind),
     maximumFractionDigits: scoreDecimals(kind),
+  })
+}
+
+function weightText(value: number | null | undefined) {
+  if (value === null || value === undefined) return undefined
+  return value.toLocaleString('pt-BR', {
+    style: 'percent',
+    maximumFractionDigits: 2,
   })
 }
 
@@ -561,6 +570,7 @@ function buildDetails(
       id: component.id,
       level,
       title: `${path.join('.')}. ${component.nome}`,
+      weight: weightText(component.peso),
       nationalRank: primaryResult?.posicao ? `${primaryResult.posicao}º` : '—',
       nationalScore: scoreText(kind, primaryResult?.nota),
       regionalRank: regionalRank ? `${regionalRank}º` : '—',
@@ -819,7 +829,7 @@ export class DashboardService {
       if (structureId) {
         const componentRows = await cachedReference(`componentes:${structureId}`, async () => (await client.query<ComponentRow>(`
           select c.id, c.codigo, c.tipo, ce.nome, ec.parent_componente_id as parent_id,
-            ec.ordem_exibicao, ce.descricao, ce.fonte, ce.unidade_medida,
+            ec.ordem_exibicao, ec.peso::float8 as peso, ce.descricao, ce.fonte, ce.unidade_medida,
             -- Algumas cargas da mesma edição não trazem o ano; usa o de outra carga quando houver.
             coalesce(ce.ultimo_ano_disponivel, (
               select max(other.ultimo_ano_disponivel) from componente_edicao other

@@ -6,6 +6,7 @@ import { hasResponsibility, ResponsibilityCell, ResponsibilityDetails, responsib
 import type { DashboardKind, DetailRow } from '../types/dashboard'
 
 interface DetailTableProps {
+  autoExpand?: boolean
   comparisonLabel?: string
   comparisonRegionalLabel?: string
   kind: DashboardKind
@@ -55,6 +56,7 @@ function UpdateNote({ row }: { row: DetailRow }) {
 }
 
 export function DetailTable({
+  autoExpand = false,
   comparisonLabel,
   comparisonRegionalLabel,
   kind,
@@ -74,11 +76,12 @@ export function DetailTable({
   const expandableIds = useMemo(() => expandableRowIds(rows), [rows])
   const allExpanded = expandableIds.length > 0 && expandableIds.every((id) => expanded.has(id))
   const showResponsibility = useMemo(() => hasResponsibility(rows), [rows])
+  const showWeight = true
 
   useEffect(() => {
-    setExpanded(new Set())
+    setExpanded(autoExpand ? new Set(expandableRowIds(rows)) : new Set())
     setOpenDetails(new Set())
-  }, [rows])
+  }, [autoExpand, rows])
 
   useEffect(() => {
     if (!comparisonEnabled) setMobileTerritory('primary')
@@ -125,6 +128,7 @@ export function DetailTable({
                 </span>
               </button>
             </td>
+            {showWeight && <td className="detail-weight-cell" title="Peso dentro do nível hierárquico superior">{cellValue(row.weight)}</td>}
             <td>{cellValue(row.nationalRank)}</td>
             <td>{cellValue(row.nationalScore)}</td>
             <td>{cellValue(row.regionalRank)}</td>
@@ -193,12 +197,13 @@ export function DetailTable({
                 )}
               </div>
             </th>
+            {showWeight && <td className="detail-weight-cell" title="Peso dentro do nível hierárquico superior">{cellValue(row.weight)}</td>}
             <td>{cellValue(rank)}</td>
             <td>{cellValue(score)}</td>
           </tr>
           {isDetailsOpen && (
             <tr className="detail-mobile-details-row">
-              <td colSpan={3}>
+              <td colSpan={showWeight ? 4 : 3}>
                 <dl>
                   <div><dt>Ano</dt><dd>{cellValue(row.year)}</dd></div>
                   <div><dt>Descrição</dt><dd>{cellValue(row.description)}</dd></div>
@@ -234,9 +239,10 @@ export function DetailTable({
       </div>
 
       <div aria-label={`Tabela detalhada de ${primaryLabel}`} className="detail-table-shell" role="region" tabIndex={0}>
-        <table className={`detail-table${comparisonEnabled ? ' detail-table-comparison' : ''}${showResponsibility ? ' detail-table-responsibility' : ''}`}>
+        <table className={`detail-table${comparisonEnabled ? ' detail-table-comparison' : ''}${showResponsibility ? ' detail-table-responsibility' : ''}${showWeight ? ' detail-table-weight' : ''}`}>
           <colgroup>
             <col className="detail-col-hierarchy" />
+            {showWeight && <col className="detail-col-weight" />}
             <col className="detail-col-rank" /><col className="detail-col-score" /><col className="detail-col-rank" /><col className="detail-col-score" />
             {comparisonEnabled && <><col className="detail-col-rank" /><col className="detail-col-score" /><col className="detail-col-rank" /><col className="detail-col-score" /></>}
             <col className="detail-col-year" />
@@ -250,6 +256,7 @@ export function DetailTable({
               <>
                 <tr className="detail-group-header">
                   <th className="detail-hierarchy-header" rowSpan={2} scope="col">{hierarchyLabel}</th>
+                  {showWeight && <th rowSpan={2} scope="col" title="Peso dentro do nível hierárquico superior">Peso</th>}
                   <th colSpan={4} scope="colgroup">{primaryLabel} · {primaryRegionalLabel}</th>
                   <th colSpan={4} scope="colgroup">{comparisonLabel} · {comparisonRegionalLabel}</th>
                   <th rowSpan={2} scope="col">Ano</th>
@@ -266,6 +273,7 @@ export function DetailTable({
             ) : (
               <tr>
                 <th className="detail-hierarchy-header" scope="col">{hierarchyLabel}</th>
+                {showWeight && <th scope="col" title="Peso dentro do nível hierárquico superior">Peso</th>}
                 <th scope="col">Ranking Brasil</th><th scope="col">Nota no Brasil</th><th scope="col">Ranking {regionalScope}</th><th scope="col">Nota média {regionalScope}</th>
                 <th scope="col">Ano</th><th scope="col">Descrição</th><th scope="col" title="Unidade original do indicador (mil, mi, bi, %, R$ etc.). As notas de ranking são normalizadas.">Unidade</th>{showResponsibility && <th scope="col">{responsibilityHeader}</th>}
                 <th scope="col">Fonte</th>
@@ -293,8 +301,8 @@ export function DetailTable({
         <div className="detail-mobile-table-shell">
           <table className="detail-mobile-table">
             <caption className="sr-only">Dados detalhados de {mobileTerritory === 'comparison' ? comparisonLabel : primaryLabel}</caption>
-            <colgroup><col /><col className="detail-mobile-rank-col" /><col className="detail-mobile-score-col" /></colgroup>
-            <thead><tr><th scope="col">Indicador</th><th scope="col">Rank.</th><th scope="col">Nota</th></tr></thead>
+            <colgroup><col />{showWeight && <col className="detail-mobile-weight-col" />}<col className="detail-mobile-rank-col" /><col className="detail-mobile-score-col" /></colgroup>
+            <thead><tr><th scope="col">Indicador</th>{showWeight && <th scope="col">Peso</th>}<th scope="col">Rank.</th><th scope="col">Nota</th></tr></thead>
             <tbody>{renderMobileRows(rows)}</tbody>
           </table>
         </div>

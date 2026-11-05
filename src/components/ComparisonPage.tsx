@@ -419,6 +419,10 @@ function scoreCell(row?: DetailRow) {
   )
 }
 
+function weightCell(row?: DetailRow) {
+  return <span className={row?.weight ? undefined : 'comparison-empty-cell'}>{row?.weight || '—'}</span>
+}
+
 function DescriptionCell({ clp, ibid }: { clp?: DetailRow; ibid?: DetailRow }) {
   const ibidText = ibid?.description?.trim()
   const clpText = clp?.description?.trim()
@@ -451,6 +455,7 @@ function PairName({ clp, ibid }: { clp: string; ibid: string }) {
 function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateName: string }) {
   const rows = conceptRows(data)
   const showResponsibility = hasResponsibility(data.ibid.details) || hasResponsibility(data.clp.details)
+  const showWeight = true
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set([rows[0]?.id ?? '']))
   const [mobileStudy, setMobileStudy] = useState<'ibid' | 'clp'>('ibid')
   const [openDetails, setOpenDetails] = useState<Set<string>>(() => new Set())
@@ -512,12 +517,13 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
               )}
             </div>
           </th>
+          {showWeight && <td className="comparison-weight-cell">{weightCell(row)}</td>}
           <td>{row?.nationalRank || '—'}</td>
           <td>{row?.nationalScore || '—'}</td>
         </tr>
         {isDetailsOpen && (
           <tr className="detail-mobile-details-row">
-            <td colSpan={3}>
+            <td colSpan={showWeight ? 4 : 3}>
               <dl>
                 <div><dt>Descrição</dt><dd>{row?.description || '—'}</dd></div>
                 <ResponsibilityDetails responsibility={row?.responsibility} />
@@ -549,10 +555,12 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
         </div>
       </div>
       <div className="detail-table-shell comparison-detail-table-shell" role="region" aria-label={`Conceitos comuns de ${stateName}`} tabIndex={0}>
-        <table className={`detail-table comparison-detail-table${showResponsibility ? ' comparison-detail-table-responsibility' : ''}`}>
+        <table className={`detail-table comparison-detail-table${showResponsibility ? ' comparison-detail-table-responsibility' : ''}${showWeight ? ' comparison-detail-table-weight' : ''}`}>
           <colgroup>
             <col className="comparison-col-concept" />
+            {showWeight && <col className="comparison-col-weight" />}
             <col className="comparison-col-value" />
+            {showWeight && <col className="comparison-col-weight" />}
             <col className="comparison-col-value" />
             <col className="comparison-col-description" />
             {showResponsibility && <col className="comparison-col-responsibility" />}
@@ -560,7 +568,11 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
           </colgroup>
           <thead>
             <tr>
-              <th className="detail-hierarchy-header">Pilar / indicador relacionado</th><th>IBID</th><th>CLP</th><th>Descrição</th>
+              <th className="detail-hierarchy-header">Pilar / indicador relacionado</th>
+              {showWeight && <th title="Peso dentro do nível hierárquico superior">Peso IBID</th>}
+              <th>IBID</th>
+              {showWeight && <th title="Peso dentro do nível hierárquico superior">Peso CLP</th>}
+              <th>CLP</th><th>Descrição</th>
               {showResponsibility && <th>{responsibilityHeader}</th>}
               <th>Fonte</th>
             </tr>
@@ -580,6 +592,7 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
                   onToggle={() => toggle(row.id)}
                   row={row}
                   showResponsibility={showResponsibility}
+                  showWeight={showWeight}
                 />
               )
             })}
@@ -594,8 +607,8 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
         <div className="detail-mobile-table-shell">
           <table className="detail-mobile-table">
             <caption className="sr-only">Conceitos comuns de {stateName} no estudo {mobileStudy.toUpperCase()}</caption>
-            <colgroup><col /><col className="detail-mobile-rank-col" /><col className="detail-mobile-score-col" /></colgroup>
-            <thead><tr><th>Conceito</th><th>Rank.</th><th>Nota</th></tr></thead>
+            <colgroup><col />{showWeight && <col className="detail-mobile-weight-col" />}<col className="detail-mobile-rank-col" /><col className="detail-mobile-score-col" /></colgroup>
+            <thead><tr><th>Conceito</th>{showWeight && <th>Peso</th>}<th>Rank.</th><th>Nota</th></tr></thead>
             <tbody>
               {rows.map((row, index) => renderMobileRow({
                 id: row.id,
@@ -611,7 +624,7 @@ function ComparisonTable({ data, stateName }: { data: ComparisonDataset; stateNa
   )
 }
 
-function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row, showResponsibility }: {
+function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row, showResponsibility, showWeight }: {
   canExpand: boolean
   childrenRows: ConceptChildRow[]
   index: number
@@ -619,6 +632,7 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
   onToggle(): void
   row: ConceptRow
   showResponsibility: boolean
+  showWeight: boolean
 }) {
   const sources = [...new Set(row.relation.indicators.map((indicator) => indicator.source))].join(' · ')
   return (
@@ -631,8 +645,10 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
             <span className="detail-row-title">{index + 1}. <PairName clp={row.relation.clpPillar} ibid={row.relation.ibidPillar} /></span>
           </button>
         </td>
-        <td>{scoreCell(row.ibid)}</td>
-        <td>{scoreCell(row.clp)}</td>
+        {showWeight && <td className="comparison-weight-cell">{weightCell(row.ibid)}</td>}
+        <td className="comparison-score-cell">{scoreCell(row.ibid)}</td>
+        {showWeight && <td className="comparison-weight-cell">{weightCell(row.clp)}</td>}
+        <td className="comparison-score-cell">{scoreCell(row.clp)}</td>
         {/* A descrição dos pilares na base é a do CLP (escala 0–100) e não vale para o IBID. */}
         <td className="detail-text-cell comparison-description-cell">—</td>
         {showResponsibility && <td className="detail-text-cell">—</td>}
@@ -650,8 +666,10 @@ function FragmentRow({ canExpand, childrenRows, index, isExpanded, onToggle, row
               </span>
             </span>
           </td>
-          <td>{scoreCell(child.ibid)}</td>
-          <td>{scoreCell(child.clp)}</td>
+          {showWeight && <td className="comparison-weight-cell">{weightCell(child.ibid)}</td>}
+          <td className="comparison-score-cell">{scoreCell(child.ibid)}</td>
+          {showWeight && <td className="comparison-weight-cell">{weightCell(child.clp)}</td>}
+          <td className="comparison-score-cell">{scoreCell(child.clp)}</td>
           <DescriptionCell clp={child.clp} ibid={child.ibid} />
           {showResponsibility && <ResponsibilityPairCell clp={child.clp?.responsibility} ibid={child.ibid?.responsibility} />}
           <td className="detail-text-cell comparison-source-cell" title={child.source}>{child.source}</td>

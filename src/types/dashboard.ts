@@ -88,6 +88,8 @@ export interface DetailRow {
   id: string
   level: 'Grupo' | 'Pilar' | 'Dimensão' | 'Indicador'
   title: string
+  /** Peso do componente dentro do nível hierárquico superior, formatado como percentual. */
+  weight?: string
   nationalRank?: string
   nationalScore?: string
   regionalRank?: string
