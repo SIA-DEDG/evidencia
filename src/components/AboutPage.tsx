@@ -75,7 +75,7 @@ const purposeHighlights = [
   {
     title: 'Cobertura',
     icon: '/assets/purpose-coverage.svg',
-    text: ['27 unidades federativas + 5 regiões. Recorte municipal na base CLP.', 'Série histórica: IBID 2015 e 2025 · CLP 2015–2025.'],
+    text: ['27 unidades federativas + 5 regiões. Recorte municipal na base CLP.', 'Série histórica: IBID 2014–2026 · CLP 2015–2025.'],
   },
 ]
 

@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react'
+import { Building2, ChevronDown, ChevronUp } from 'lucide-react'
 import type { DetailRow, IndicatorResponsibility, ResponsibleAgency } from '../types/dashboard'
 
 export const responsibilityHeader = 'Órgãos responsáveis (PI)'
@@ -22,12 +22,19 @@ function AgencyList({ agencies }: { agencies: ResponsibleAgency[] }) {
     <ul className="detail-agency-list">
       {agencies.map((agency, index) => (
         <li key={`${agency.name}-${index}`}>
-          <span>{agency.name}</span>
-          {agency.legalBasis && <small>{agency.legalBasis}</small>}
+          <Building2 aria-hidden="true" size={14} />
+          <span className="detail-agency-copy">
+            <span>{agency.name}</span>
+            {agency.legalBasis && <small>{agency.legalBasis}</small>}
+          </span>
         </li>
       ))}
     </ul>
   )
+}
+
+function collapseResponsibility(event: React.MouseEvent<HTMLButtonElement>) {
+  event.currentTarget.closest('details')?.removeAttribute('open')
 }
 
 function ResponsibilityContent({ label, responsibility }: { label?: string; responsibility: IndicatorResponsibility }) {
@@ -45,20 +52,28 @@ function ResponsibilityContent({ label, responsibility }: { label?: string; resp
         <ChevronDown aria-hidden="true" className="detail-responsibility-chevron" size={16} />
       </summary>
       <div className="detail-responsibility-content">
-        {responsibility.principal.length > 0 && (
-          <section>
-            <h4>{responsibility.principal.length === 1 ? 'Responsável principal' : 'Responsáveis principais'}</h4>
-            <AgencyList agencies={responsibility.principal} />
-          </section>
-        )}
-        {responsibility.coResponsible.length > 0 && (
-          <section>
-            <h4>Corresponsáveis</h4>
-            <AgencyList agencies={responsibility.coResponsible} />
-          </section>
-        )}
-        <small>{relationText(responsibility)}</small>
-        {responsibility.justification.trim() && <em>{responsibility.justification}</em>}
+        <div className="detail-responsibility-agencies">
+          {responsibility.principal.length > 0 && (
+            <section>
+              <h4>{responsibility.principal.length === 1 ? 'Responsável principal' : 'Responsáveis principais'}</h4>
+              <AgencyList agencies={responsibility.principal} />
+            </section>
+          )}
+          {responsibility.coResponsible.length > 0 && (
+            <section>
+              <h4>Corresponsáveis</h4>
+              <AgencyList agencies={responsibility.coResponsible} />
+            </section>
+          )}
+        </div>
+        <div className="detail-responsibility-context">
+          <small>{relationText(responsibility)}</small>
+          {responsibility.justification.trim() && <em>{responsibility.justification}</em>}
+        </div>
+        <button className="detail-responsibility-collapse" onClick={collapseResponsibility} type="button">
+          <ChevronUp aria-hidden="true" size={16} />
+          Recolher
+        </button>
       </div>
     </details>
   )

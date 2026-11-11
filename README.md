@@ -54,6 +54,13 @@ python scripts/import-governance-metadata.py `
   --apply
 ```
 
+## Importação das bases de ranking
+
+O importador relacional de Estados, Municípios e IBID fica em
+[`tools/ranking-clp-db`](tools/ranking-clp-db). A versão 0.5 valida e importa os
+quadros completos do IBID 2026 e a série histórica 2014–2026, preservando 2026
+como fonte canônica dos quadros completos e evitando fatos duplicados.
+
 ## Preferências do header
 
 O tamanho da fonte e o tema são persistidos no navegador com as mesmas chaves usadas nas demais aplicações SIA:
