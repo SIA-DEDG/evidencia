@@ -69,6 +69,36 @@
     color: #10233b;
   }
 
+  .home-development-notice {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid #f0d58a;
+    background: #fff6dc;
+    padding: 10px 24px;
+    color: #684a00;
+    font-family: Montserrat, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+  }
+  .home-development-notice strong { font-weight: 700; }
+  .home-development-notice strong::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 7px;
+    border-radius: 999px;
+    background: #d59800;
+    box-shadow: 0 0 0 4px rgba(213, 152, 0, .14);
+    vertical-align: 1px;
+  }
+
   /* Etiqueta em pílula que abre as seções da página inicial. */
   .home-badge {
     display: inline-flex;
@@ -1033,6 +1063,7 @@
   .comparison-dumbbell-legend li { @apply flex items-center gap-1.5; }
   .comparison-dumbbell-legend span { @apply h-3 w-3 rounded-full; }
   @media (max-width: 640px) {
+    .home-development-notice { align-items: flex-start; flex-direction: column; gap: 2px; padding: 10px 16px; text-align: left; }
     .comparison-dumbbell-row { grid-template-columns: minmax(0, 1fr) 64px; }
     .comparison-dumbbell-title { grid-column: 1 / -1; }
     .comparison-scatter-canvas { @apply h-[360px]; }
@@ -1355,6 +1386,7 @@
     flex-direction: column;
     gap: 12px;
   }
+  .highlights-band-main.is-compact { justify-content: center; }
   .highlights-band-group { display: flex; flex-direction: column; gap: 10px; }
   .highlights-band-group > h3 { margin: 0; color: #cfe3f8; font-size: 13px; font-weight: 700; }
   .highlights-band-moves { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }

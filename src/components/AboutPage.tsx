@@ -255,6 +255,10 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
 
   return (
     <main className="home-page">
+      <aside aria-label="Aviso de desenvolvimento" className="home-development-notice">
+        <strong>Plataforma em desenvolvimento</strong>
+        <span>Este painel está em processo de desenvolvimento e pode passar por ajustes.</span>
+      </aside>
       <section className="home-hero" aria-labelledby="home-title" data-node-id="3019:1100">
         <div aria-hidden="true" className="home-hero-tiles">
           {heroTiles.map(({ side, offset, top, color }) => (

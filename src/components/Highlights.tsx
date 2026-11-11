@@ -187,7 +187,7 @@ export function HighlightsBand({ items, place, year }: { items: BandHighlight[];
           </button>
         )}
       </div>
-      <div className="highlights-band-main" id={`${id}-moves`}>
+      <div className={`highlights-band-main${expanded ? '' : ' is-compact'}`} id={`${id}-moves`}>
         {expanded
           ? groups.map(([label, list]) => (
             <div className="highlights-band-group" key={label}>
