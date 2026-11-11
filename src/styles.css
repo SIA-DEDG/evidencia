@@ -1301,7 +1301,8 @@
   .highlights-band {
     position: relative;
     display: grid;
-    grid-template-columns: 230px minmax(0, 1fr);
+    min-height: 300px;
+    grid-template-columns: 340px minmax(0, 1fr);
     gap: 20px 28px;
     margin-top: 20px;
     overflow: hidden;
@@ -1332,6 +1333,8 @@
     align-items: flex-start;
     gap: 10px;
   }
+  .highlights-band-tools { display: flex; max-width: 100%; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .highlights-band-tools > .highlights-band-badge { padding-right: 18px; }
   .highlights-band-badge {
     display: inline-flex;
     align-items: center;
@@ -1354,6 +1357,61 @@
     height: 18px;
     background: url('/assets/badge-isotipo-assistant.svg') center / contain no-repeat;
   }
+  .highlights-band-criteria { position: relative; }
+  .highlights-band-criteria-trigger {
+    background: transparent;
+    padding: 5px 10px;
+    font-size: 11px;
+    letter-spacing: .45px;
+    cursor: help;
+  }
+  .highlights-band-criteria-trigger::before { display: none; }
+  .highlights-band-criteria-trigger svg { flex: 0 0 auto; }
+  .highlights-band-criteria-tooltip {
+    position: absolute;
+    z-index: 4;
+    top: calc(100% + 9px);
+    left: 0;
+    width: min(320px, calc(100vw - 80px));
+    visibility: hidden;
+    border: 1px solid #c9dcef;
+    border-radius: 10px;
+    background: #fff;
+    padding: 11px 12px;
+    color: #203b5b;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: normal;
+    line-height: 1.45;
+    opacity: 0;
+    box-shadow: 0 12px 28px rgba(0, 17, 46, .24);
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity .16s ease, transform .16s ease, visibility .16s;
+    white-space: normal;
+  }
+  .highlights-band-criteria-tooltip::before,
+  .highlights-band-criteria-tooltip::after {
+    content: "";
+    position: absolute;
+    left: 11px;
+    border-right: 7px solid transparent;
+    border-left: 7px solid transparent;
+  }
+  .highlights-band-criteria-tooltip::before {
+    top: -8px;
+    border-bottom: 8px solid #c9dcef;
+  }
+  .highlights-band-criteria-tooltip::after {
+    top: -6px;
+    border-bottom: 7px solid #fff;
+  }
+  .highlights-band-criteria:hover .highlights-band-criteria-tooltip,
+  .highlights-band-criteria:focus-within .highlights-band-criteria-tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+  }
   .highlights-band-side h2 { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.25; }
   .highlights-band-side h2 span { color: #72b3f4; }
   .highlights-band-side > p { margin: 0; color: #b9e2ff; font-size: 13px; line-height: 1.45; }
@@ -1361,9 +1419,6 @@
   .highlights-band-summary .band-chip-up { background: rgba(140, 214, 170, .18); color: #a7e8c0; }
   .highlights-band-summary .band-chip-down { background: rgba(255, 150, 150, .16); color: #ffb7b7; }
   .highlights-band-summary .band-chip-top { background: rgba(255, 214, 120, .16); color: #ffd98a; }
-  .highlights-band-criteria { color: #b9e2ff; font-size: 12.5px; line-height: 1.45; }
-  .highlights-band-criteria summary { color: #91c9ff; font-weight: 600; cursor: pointer; }
-  .highlights-band-criteria p { margin: 6px 0 0; }
   .highlights-band-toggle {
     display: inline-flex;
     align-items: center;
@@ -1542,6 +1597,7 @@
 @media (max-width: 1240px) {
   .home-hero-copy > p { font-size: 16px; }
   .home-purpose-content { gap: 48px; }
+  .highlights-band { min-height: 0; grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 1080px) {
@@ -1557,7 +1613,6 @@
   }
   .home-purpose-content { flex-direction: column; gap: 40px; }
   .home-purpose-text { width: 100%; max-width: 781px; flex: 0 0 auto; }
-  .highlights-band { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 960px) {
@@ -1632,6 +1687,9 @@
   .about-study-grid::-webkit-scrollbar { display: none; }
   .about-study-grid > .study-card { @apply w-full shrink-0; scroll-snap-align: start; scroll-snap-stop: always; }
   .highlights-band { padding: 18px 16px; }
+  .highlights-band-tools { gap: 6px; }
+  .highlights-band-badge { padding: 6px 10px 6px 8px; font-size: 12px; }
+  .highlights-band-criteria-trigger { padding: 5px 9px; font-size: 11px; }
   .highlights-band-moves { grid-template-columns: minmax(0, 1fr); }
   .home-hero-copy { gap: 16px; padding: 40px 20px 100px; }
   .home-hero-copy h1 img { width: 240px; }

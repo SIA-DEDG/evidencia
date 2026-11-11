@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Coins,
   HeartPulse,
+  Info,
   Landmark,
   Leaf,
   Lightbulb,
@@ -168,7 +169,23 @@ export function HighlightsBand({ items, place, year }: { items: BandHighlight[];
     <section aria-labelledby={`${id}-title`} className="highlights-band">
       <div aria-hidden="true" className="highlights-band-pixels"><span /><span /><span /><span /></div>
       <div className="highlights-band-side">
-        <p className="highlights-band-badge">Destaques {year}</p>
+        <div className="highlights-band-tools">
+          <p className="highlights-band-badge">Destaques {year}</p>
+          <div className="highlights-band-criteria">
+            <button
+              aria-describedby={`${id}-criteria-tooltip`}
+              aria-label="Critérios de destaques"
+              className="highlights-band-badge highlights-band-criteria-trigger"
+              type="button"
+            >
+              <Info aria-hidden="true" size={15} />
+              <span>Critérios <span className="highlights-band-criteria-long-label">de destaques</span></span>
+            </button>
+            <span className="highlights-band-criteria-tooltip" id={`${id}-criteria-tooltip`} role="tooltip">
+              Entram os itens que mudaram mais de 3 posições no ranking Brasil em relação ao ano anterior e os que entraram ou seguem entre os top 10, 5 ou 3 nacional.
+            </span>
+          </div>
+        </div>
         <h2 id={`${id}-title`}>O que mudou para <span>{place}</span></h2>
         <p>Mudanças grandes no ranking Brasil, de {year - 1} para {year}.</p>
         <div aria-label="Resumo dos destaques" className="highlights-band-summary">
@@ -176,10 +193,6 @@ export function HighlightsBand({ items, place, year }: { items: BandHighlight[];
           {downs > 0 && <span className="band-chip band-chip-down"><TrendingDown aria-hidden="true" size={12} />{downs} {downs === 1 ? 'caiu' : 'caíram'}</span>}
           {tops > 0 && <span className="band-chip band-chip-top"><Medal aria-hidden="true" size={12} />{tops} no topo</span>}
         </div>
-        <details className="highlights-band-criteria">
-          <summary>Como escolhemos</summary>
-          <p>Entram os itens que mudaram mais de 3 posições no ranking Brasil em relação ao ano anterior e os que entraram ou seguem entre os top 10, 5 ou 3.</p>
-        </details>
         {ordered.length > visibleCount && (
           <button aria-controls={`${id}-moves`} aria-expanded={expanded} className="highlights-band-toggle" onClick={() => setExpanded((value) => !value)} type="button">
             {expanded ? 'Mostrar só os principais' : `Ver todos os ${ordered.length} destaques`}
