@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Info } from 'lucide-react'
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { formatIndicatorUnit } from '../data/indicatorUnit'
 import { IbidDataInfo } from './IbidDataInfo'
 import { hasResponsibility, ResponsibilityCell, ResponsibilityDetails, responsibilityHeader } from './IndicatorResponsibility'
@@ -71,11 +72,66 @@ function ScoreValue({ missingAtSource, value }: { missingAtSource?: boolean; val
 
 /** Ano do dado, destacado quando é anterior ao ano selecionado. */
 function YearValue({ row }: { row: DetailRow }) {
+  const tooltipId = useId()
+  const triggerRef = useRef<HTMLSpanElement>(null)
+  const [tooltipOpen, setTooltipOpen] = useState(false)
+  const [tooltipPosition, setTooltipPosition] = useState({ arrowLeft: 20, left: 12, top: 0 })
+
+  const positionTooltip = useCallback(() => {
+    const trigger = triggerRef.current
+    if (!trigger) return
+
+    const rect = trigger.getBoundingClientRect()
+    const width = Math.min(320, window.innerWidth - 24)
+    const left = Math.min(Math.max(rect.left + rect.width / 2 - width / 2, 12), window.innerWidth - width - 12)
+
+    setTooltipPosition({
+      arrowLeft: Math.min(Math.max(rect.left + rect.width / 2 - left, 14), width - 14),
+      left,
+      top: rect.bottom + 9,
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!tooltipOpen) return
+    positionTooltip()
+    window.addEventListener('resize', positionTooltip)
+    window.addEventListener('scroll', positionTooltip, true)
+    return () => {
+      window.removeEventListener('resize', positionTooltip)
+      window.removeEventListener('scroll', positionTooltip, true)
+    }
+  }, [positionTooltip, tooltipOpen])
+
   if (!row.yearNote) return <>{cellValue(row.year)}</>
   return (
-    <span className="detail-year-lagged" title={row.yearNote}>
+    <span
+      aria-describedby={tooltipOpen ? tooltipId : undefined}
+      className="detail-year-lagged detail-year-tooltip-trigger"
+      onBlur={() => setTooltipOpen(false)}
+      onFocus={() => { positionTooltip(); setTooltipOpen(true) }}
+      onMouseEnter={() => { positionTooltip(); setTooltipOpen(true) }}
+      onMouseLeave={() => setTooltipOpen(false)}
+      ref={triggerRef}
+      tabIndex={0}
+    >
       {cellValue(row.year)}
       <span className="sr-only">: {row.yearNote}</span>
+      {tooltipOpen && createPortal(
+        <span
+          className="detail-year-tooltip"
+          id={tooltipId}
+          role="tooltip"
+          style={{
+            '--detail-tooltip-arrow-left': `${tooltipPosition.arrowLeft}px`,
+            left: tooltipPosition.left,
+            top: tooltipPosition.top,
+          } as React.CSSProperties}
+        >
+          {row.yearNote}
+        </span>,
+        document.body,
+      )}
     </span>
   )
 }

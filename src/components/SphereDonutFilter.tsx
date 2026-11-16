@@ -54,7 +54,7 @@ function titleFor(data: SphereBreakdownItem[]) {
     .filter((level) => levels.includes(level))
     .map((level) => LEVEL_LABELS[level])
 
-  if (labels.length === 0) return 'Esferas responsáveis pelos componentes'
+  if (labels.length === 0) return 'Esferas responsáveis pelos indicadores'
   if (labels.length === 1) return `Esferas responsáveis ${labels[0]}`
   return `Esferas responsáveis ${labels.slice(0, -1).join(', ')} e ${labels.at(-1)}`
 }
@@ -67,7 +67,7 @@ function SphereTooltip({ active, payload, total }: TooltipContentProps & { total
   return (
     <div className="chart-tooltip sphere-donut-tooltip">
       <strong>{datum.name}</strong>
-      <p><span style={{ backgroundColor: datum.color }} />{datum.count} componentes · {percentage(datum.count, total)}</p>
+      <p><span style={{ backgroundColor: datum.color }} />{datum.count} indicadores · {percentage(datum.count, total)}</p>
     </div>
   )
 }
@@ -102,7 +102,7 @@ export function SphereDonutFilter({ data, onChange, selected }: SphereDonutFilte
       </div>
 
       <div className="sphere-filter-content">
-        <div aria-label={`Gráfico de rosca com ${total} componentes distribuídos por esfera`} className="sphere-donut-canvas" role="img">
+        <div aria-label={`Gráfico de rosca com ${total} indicadores distribuídos por esfera`} className="sphere-donut-canvas" role="img">
           <ResponsiveContainer height="100%" width="100%">
             <PieChart accessibilityLayer>
               <Pie
@@ -127,7 +127,7 @@ export function SphereDonutFilter({ data, onChange, selected }: SphereDonutFilte
               </Pie>
               <Tooltip content={(props) => <SphereTooltip {...props} total={total} />} />
               <text className="sphere-donut-total" dominantBaseline="central" textAnchor="middle" x="50%" y="47%">{centerCount}</text>
-              <text className="sphere-donut-caption" dominantBaseline="central" textAnchor="middle" x="50%" y="58%">componentes</text>
+              <text className="sphere-donut-caption" dominantBaseline="central" textAnchor="middle" x="50%" y="58%">INDICADORES</text>
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -151,7 +151,7 @@ export function SphereDonutFilter({ data, onChange, selected }: SphereDonutFilte
         </ul>
       </div>
       <p aria-live="polite" className="sr-only">
-        {selectedItem ? `Filtro ativo: ${selectedItem.name}, ${selectedItem.count} componentes.` : `Todos os ${total} componentes estão visíveis.`}
+        {selectedItem ? `Filtro ativo: ${selectedItem.name}, ${selectedItem.count} indicadores.` : `Todos os ${total} indicadores estão visíveis.`}
       </p>
     </section>
   )

@@ -1244,6 +1244,37 @@
   .detail-score-missing { @apply inline-flex flex-wrap items-center justify-center gap-1; }
   .detail-missing-tag { @apply inline-block rounded bg-amber-100 px-1 py-px align-middle text-[10px] font-semibold uppercase leading-4 tracking-normal text-amber-800 dark:bg-amber-900/40 dark:text-amber-200; }
   .detail-year-lagged { @apply font-semibold text-amber-700 underline decoration-dotted underline-offset-2 dark:text-amber-300; }
+  .detail-year-tooltip-trigger { @apply cursor-help outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[#2f8fd1]/40; }
+  .detail-year-tooltip {
+    position: fixed;
+    z-index: 100;
+    width: min(320px, calc(100vw - 24px));
+    border: 1px solid #c9dcef;
+    border-radius: 10px;
+    background: #fff;
+    padding: 11px 12px;
+    color: #203b5b;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: normal;
+    line-height: 1.45;
+    text-align: left;
+    white-space: normal;
+    box-shadow: 0 12px 28px rgba(0, 17, 46, .24);
+    pointer-events: none;
+  }
+  .detail-year-tooltip::before,
+  .detail-year-tooltip::after {
+    content: "";
+    position: absolute;
+    left: var(--detail-tooltip-arrow-left, 20px);
+    border-right: 7px solid transparent;
+    border-left: 7px solid transparent;
+    transform: translateX(-50%);
+  }
+  .detail-year-tooltip::before { top: -8px; border-bottom: 8px solid #c9dcef; }
+  .detail-year-tooltip::after { top: -6px; border-bottom: 7px solid #fff; }
   .detail-table-legend { @apply mt-3 space-y-1 text-xs leading-snug text-muted dark:text-slate-400; }
   .detail-mobile-note { @apply mt-0.5 block text-[11px] leading-tight text-amber-800 dark:text-amber-200; }
   .detail-mobile-table-view { @apply mt-4 hidden; }

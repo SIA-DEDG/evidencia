@@ -6,7 +6,7 @@ export interface SphereBreakdownItem {
   name: string
 }
 
-/** Conta os mesmos componentes com responsabilidade que aparecem na tabela detalhada. */
+/** Conta apenas os indicadores com responsabilidade que aparecem na tabela detalhada. */
 export function buildSphereBreakdown(rows: DetailRow[]) {
   const counts = new Map<string, number>()
   const levels = new Map<string, Set<DetailRow['level']>>()
@@ -15,7 +15,7 @@ export function buildSphereBreakdown(rows: DetailRow[]) {
   function visit(items: DetailRow[]) {
     items.forEach((row) => {
       const sphere = row.responsibility?.sphere.trim()
-      if (sphere && !seenComponents.has(row.id)) {
+      if (row.level === 'Indicador' && sphere && !seenComponents.has(row.id)) {
         seenComponents.add(row.id)
         counts.set(sphere, (counts.get(sphere) ?? 0) + 1)
         const sphereLevels = levels.get(sphere) ?? new Set<DetailRow['level']>()
