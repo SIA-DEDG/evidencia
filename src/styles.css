@@ -1003,6 +1003,7 @@
   .chart-tooltip strong { @apply mb-1 block font-semibold; }
   .chart-tooltip p { @apply flex items-center gap-1.5 py-0.5; }
   .chart-tooltip p span { @apply size-2 shrink-0 rounded-full; }
+  .chart-tooltip p.chart-tooltip-note { @apply block max-w-[240px] text-[11px] leading-snug text-amber-200; }
   .sphere-filter-panel { @apply border border-[#e1edf8]; }
   .sphere-filter { @apply min-w-0; }
   .sphere-filter-heading { @apply flex flex-wrap items-start justify-between gap-3; }
@@ -1240,6 +1241,11 @@
   .level-badge-stack { @apply flex shrink-0 flex-col items-center gap-1; }
   .detail-row-title-group { @apply flex min-w-0 flex-col gap-0.5; }
   .detail-update-note { @apply text-[11px] font-normal leading-tight text-muted dark:text-slate-400; }
+  .detail-score-missing { @apply inline-flex flex-wrap items-center justify-center gap-1; }
+  .detail-missing-tag { @apply inline-block rounded bg-amber-100 px-1 py-px align-middle text-[10px] font-semibold uppercase leading-4 tracking-normal text-amber-800 dark:bg-amber-900/40 dark:text-amber-200; }
+  .detail-year-lagged { @apply font-semibold text-amber-700 underline decoration-dotted underline-offset-2 dark:text-amber-300; }
+  .detail-table-legend { @apply mt-3 space-y-1 text-xs leading-snug text-muted dark:text-slate-400; }
+  .detail-mobile-note { @apply mt-0.5 block text-[11px] leading-tight text-amber-800 dark:text-amber-200; }
   .detail-mobile-table-view { @apply mt-4 hidden; }
   .detail-mobile-territory { @apply mb-2 grid grid-cols-2 rounded-lg bg-[#dce7f1] p-1 dark:bg-slate-800; }
   .detail-mobile-territory button { @apply min-w-0 truncate rounded-md px-3 py-2 text-[11px] font-semibold text-muted transition-colors dark:text-slate-300; }

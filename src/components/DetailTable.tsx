@@ -55,6 +55,42 @@ function UpdateNote({ row }: { row: DetailRow }) {
   return <span className="detail-update-note">Última atualização {levelArticles[row.level]} em {row.updateYear}</span>
 }
 
+const missingAtSourceText = 'A fonte não tinha este dado para o território e atribuiu a nota exibida.'
+
+/** Nota com o aviso de que a fonte a atribuiu sem ter o dado do território. */
+function ScoreValue({ missingAtSource, value }: { missingAtSource?: boolean; value?: string }) {
+  if (!missingAtSource) return <>{cellValue(value)}</>
+  return (
+    <span className="detail-score-missing" title={missingAtSourceText}>
+      {cellValue(value)}
+      <span className="detail-missing-tag">sem dado</span>
+      <span className="sr-only">: {missingAtSourceText}</span>
+    </span>
+  )
+}
+
+/** Ano do dado, destacado quando é anterior ao ano selecionado. */
+function YearValue({ row }: { row: DetailRow }) {
+  if (!row.yearNote) return <>{cellValue(row.year)}</>
+  return (
+    <span className="detail-year-lagged" title={row.yearNote}>
+      {cellValue(row.year)}
+      <span className="sr-only">: {row.yearNote}</span>
+    </span>
+  )
+}
+
+function collectDataNotes(rows: DetailRow[]) {
+  const notes = { lagged: false, missing: false }
+  const visit = (items: DetailRow[]) => items.forEach((row) => {
+    if (row.yearNote) notes.lagged = true
+    if (row.missingAtSource || row.comparisonMissingAtSource) notes.missing = true
+    if (row.children) visit(row.children)
+  })
+  visit(rows)
+  return notes
+}
+
 export function DetailTable({
   autoExpand = false,
   comparisonLabel,
@@ -76,6 +112,7 @@ export function DetailTable({
   const expandableIds = useMemo(() => expandableRowIds(rows), [rows])
   const allExpanded = expandableIds.length > 0 && expandableIds.every((id) => expanded.has(id))
   const showResponsibility = useMemo(() => hasResponsibility(rows), [rows])
+  const dataNotes = useMemo(() => collectDataNotes(rows), [rows])
   const showWeight = true
 
   useEffect(() => {
@@ -130,18 +167,18 @@ export function DetailTable({
             </td>
             {showWeight && <td className="detail-weight-cell" title="Peso dentro do nível hierárquico superior">{cellValue(row.weight)}</td>}
             <td>{cellValue(row.nationalRank)}</td>
-            <td>{cellValue(row.nationalScore)}</td>
+            <td><ScoreValue missingAtSource={row.missingAtSource} value={row.nationalScore} /></td>
             <td>{cellValue(row.regionalRank)}</td>
             <td>{cellValue(row.regionalScore)}</td>
             {comparisonEnabled && (
               <>
                 <td>{cellValue(row.comparisonNationalRank)}</td>
-                <td>{cellValue(row.comparisonNationalScore)}</td>
+                <td><ScoreValue missingAtSource={row.comparisonMissingAtSource} value={row.comparisonNationalScore} /></td>
                 <td>{cellValue(row.comparisonRegionalRank)}</td>
                 <td>{cellValue(row.comparisonRegionalScore)}</td>
               </>
             )}
-            <td>{cellValue(row.year)}</td>
+            <td><YearValue row={row} /></td>
             <td className="detail-text-cell" title={row.description}>{cellValue(row.description)}</td>
             <td className="detail-text-cell" title={row.unit}>{formatIndicatorUnit(row.unit)}</td>
             {showResponsibility && <ResponsibilityCell responsibility={row.responsibility} />}
@@ -167,6 +204,9 @@ export function DetailTable({
       const score = comparisonSelected
         ? mobileScope === 'national' ? row.comparisonNationalScore : row.comparisonRegionalScore
         : mobileScope === 'national' ? row.nationalScore : row.regionalScore
+      // O aviso vale para a nota do território; a média regional não é marcada.
+      const scoreMissingAtSource = mobileScope === 'national'
+        && (comparisonSelected ? row.comparisonMissingAtSource : row.missingAtSource)
 
       return (
         <Fragment key={row.id}>
@@ -199,13 +239,13 @@ export function DetailTable({
             </th>
             {showWeight && <td className="detail-weight-cell" title="Peso dentro do nível hierárquico superior">{cellValue(row.weight)}</td>}
             <td>{cellValue(rank)}</td>
-            <td>{cellValue(score)}</td>
+            <td><ScoreValue missingAtSource={scoreMissingAtSource} value={score} /></td>
           </tr>
           {isDetailsOpen && (
             <tr className="detail-mobile-details-row">
               <td colSpan={showWeight ? 4 : 3}>
                 <dl>
-                  <div><dt>Ano</dt><dd>{cellValue(row.year)}</dd></div>
+                  <div><dt>Ano do dado</dt><dd>{cellValue(row.year)}{row.yearNote ? <span className="detail-mobile-note">{row.yearNote}</span> : null}</dd></div>
                   <div><dt>Descrição</dt><dd>{cellValue(row.description)}</dd></div>
                   <div><dt>Unidade do indicador</dt><dd title={row.unit}>{formatIndicatorUnit(row.unit)}</dd></div>
                   <ResponsibilityDetails responsibility={row.responsibility} />
@@ -259,7 +299,7 @@ export function DetailTable({
                   {showWeight && <th rowSpan={2} scope="col" title="Peso dentro do nível hierárquico superior">Peso</th>}
                   <th colSpan={4} scope="colgroup">{primaryLabel} · {primaryRegionalLabel}</th>
                   <th colSpan={4} scope="colgroup">{comparisonLabel} · {comparisonRegionalLabel}</th>
-                  <th rowSpan={2} scope="col">Ano</th>
+                  <th rowSpan={2} scope="col">Ano do dado</th>
                   <th rowSpan={2} scope="col">Descrição</th>
                   <th rowSpan={2} scope="col" title="Unidade original do indicador (mil, mi, bi, %, R$ etc.). As notas de ranking são normalizadas.">Unidade</th>
                   {showResponsibility && <th rowSpan={2} scope="col">{responsibilityHeader}</th>}
@@ -275,7 +315,7 @@ export function DetailTable({
                 <th className="detail-hierarchy-header" scope="col">{hierarchyLabel}</th>
                 {showWeight && <th scope="col" title="Peso dentro do nível hierárquico superior">Peso</th>}
                 <th scope="col">Ranking Brasil</th><th scope="col">Nota no Brasil</th><th scope="col">Ranking {regionalScope}</th><th scope="col">Nota média {regionalScope}</th>
-                <th scope="col">Ano</th><th scope="col">Descrição</th><th scope="col" title="Unidade original do indicador (mil, mi, bi, %, R$ etc.). As notas de ranking são normalizadas.">Unidade</th>{showResponsibility && <th scope="col">{responsibilityHeader}</th>}
+                <th scope="col">Ano do dado</th><th scope="col">Descrição</th><th scope="col" title="Unidade original do indicador (mil, mi, bi, %, R$ etc.). As notas de ranking são normalizadas.">Unidade</th>{showResponsibility && <th scope="col">{responsibilityHeader}</th>}
                 <th scope="col">Fonte</th>
               </tr>
             )}
@@ -307,6 +347,16 @@ export function DetailTable({
           </table>
         </div>
       </div>
+      {(dataNotes.lagged || dataNotes.missing) && (
+        <ul className="detail-table-legend">
+          {dataNotes.lagged && (
+            <li><span className="detail-year-lagged">Ano destacado</span>: o componente não tem dado do ano selecionado; é exibido o dado mais recente disponível.</li>
+          )}
+          {dataNotes.missing && (
+            <li><span className="detail-missing-tag">sem dado</span> {missingAtSourceText} A nota oficial é mantida, mas não indica desempenho real.</li>
+          )}
+        </ul>
+      )}
     </section>
   )
 }

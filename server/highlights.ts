@@ -11,6 +11,8 @@ interface HighlightResult {
   componente_id?: string
   ano_referencia?: number
   posicao: number | null
+  /** SEM_DADO_FONTE: a fonte atribuiu nota sem ter o dado do território. */
+  situacao_dado?: string
 }
 
 const groupLabels: Record<string, string> = {
@@ -26,7 +28,10 @@ function topTier(position: number): 3 | 5 | 10 | undefined {
   if (position <= 10) return 10
 }
 
-/** Só há comparação quando o mesmo componente tem posição nos dois anos consecutivos. */
+/**
+ * Só há comparação quando o mesmo componente tem posição nos dois anos consecutivos.
+ * Posições vindas de nota atribuída sem dado na fonte não contam: a subida ou queda não seria real.
+ */
 export function buildHighlights(
   components: HighlightComponent[],
   results: HighlightResult[],
@@ -41,6 +46,7 @@ export function buildHighlights(
   for (const result of results) {
     if (!result.componente_id || !result.ano_referencia || result.posicao === null || !Number.isInteger(result.posicao) || result.posicao <= 0) continue
     if (result.ano_referencia !== selectedYear && result.ano_referencia !== previousYear) continue
+    if (result.situacao_dado === 'SEM_DADO_FONTE') continue
     const years = positions.get(result.componente_id) ?? new Map<number, number>()
     years.set(result.ano_referencia, result.posicao)
     positions.set(result.componente_id, years)

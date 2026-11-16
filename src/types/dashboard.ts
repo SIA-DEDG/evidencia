@@ -98,7 +98,13 @@ export interface DetailRow {
   comparisonNationalScore?: string
   comparisonRegionalRank?: string
   comparisonRegionalScore?: string
+  /** Ano do dado exibido: o selecionado ou, se o componente não tiver esse ano, o mais recente anterior. */
   year?: string
+  /** Explica por que o ano do dado é anterior ao selecionado. */
+  yearNote?: string
+  /** A fonte não tinha o dado do território principal e atribuiu a nota exibida (em geral 0). */
+  missingAtSource?: boolean
+  comparisonMissingAtSource?: boolean
   /** Último ano com dado disponível para o componente (pode ser anterior ao ano do ranking). */
   updateYear?: string
   description?: string
@@ -129,6 +135,11 @@ export interface ComponentInsight {
   position: number | null
   total: number
   history: InsightPositionPoint[]
+  /** Ano do dado quando o componente não tem o ano selecionado e entra com o mais recente anterior. */
+  dataYear?: number
+  /** A fonte atribuiu a nota sem ter o dado do território (principal ou comparação). */
+  scoreMissingAtSource?: boolean
+  comparisonScoreMissingAtSource?: boolean
 }
 
 export interface InsightGroup {

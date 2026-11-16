@@ -135,6 +135,7 @@ export function DashboardPage({ data, onClpModeChange, onFiltersChange }: Dashbo
               primary={data.history}
               primaryLabel={primaryLabel}
               source={data.meta.source}
+              years={data.chart.years}
             />
             <SeriesChart chart={data.chart} hasComparison={hasComparison} kind={data.kind} metricLabel={metricLabel} source={data.meta.source} />
           </div>

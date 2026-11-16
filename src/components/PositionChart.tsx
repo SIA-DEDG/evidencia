@@ -19,9 +19,13 @@ interface PositionDatum {
   total: number | null
 }
 
-function PositionTooltip({ active, label, payload }: TooltipContentProps) {
+const MUNICIPAL_SCOPE_NOTE = 'O CLP só avalia municípios com mais de 80 mil habitantes.'
+
+function PositionTooltip({ active, label, payload, municipal }: TooltipContentProps & { municipal: boolean }) {
   if (!active || !payload.length) return null
   const total = (payload[0]?.payload as PositionDatum | undefined)?.total
+  const missingText = municipal ? 'não avaliado neste ano' : 'sem posição neste ano'
+  const hasMissing = payload.some((entry) => typeof entry.value !== 'number')
 
   return (
     <div className="chart-tooltip">
@@ -29,9 +33,10 @@ function PositionTooltip({ active, label, payload }: TooltipContentProps) {
       {payload.map((entry) => (
         <p key={String(entry.dataKey)}>
           <span style={{ backgroundColor: entry.color }} />
-          {entry.name}: {typeof entry.value === 'number' ? `${entry.value}º lugar${total ? ` de ${total}` : ''}` : '—'}
+          {entry.name}: {typeof entry.value === 'number' ? `${entry.value}º lugar${total ? ` de ${total}` : ''}` : missingText}
         </p>
       ))}
+      {municipal && hasMissing && <p className="chart-tooltip-note">{MUNICIPAL_SCOPE_NOTE}</p>}
     </div>
   )
 }
@@ -45,6 +50,8 @@ interface PositionChartProps {
   primary: RankingHistoryItem[]
   primaryLabel: string
   source: string
+  /** Todos os anos da série da métrica: os anos sem posição aparecem como lacuna, não são pulados. */
+  years: number[]
 }
 
 /** Bolinha preenchida com a cor da linha e contorno branco; o tracejado da linha não passa para o contorno. */
@@ -52,9 +59,11 @@ function lineDot(color: string, r = 4) {
   return { fill: color, r, stroke: '#ffffff', strokeDasharray: 'none', strokeWidth: 1.5 }
 }
 
-export function PositionChart({ comparison, comparisonLabel, hasComparison, kind, metricLabel, primary, primaryLabel, source }: PositionChartProps) {
+export function PositionChart({ comparison, comparisonLabel, hasComparison, kind, metricLabel, primary, primaryLabel, source, years: seriesYears }: PositionChartProps) {
   const colors = getDashboardChartColors(kind)
-  const years = [...new Set([...primary, ...(hasComparison ? comparison : [])].map((item) => item.year))].sort((a, b) => a - b)
+  const municipal = kind === 'clp-municipios'
+  const historyYears = [...primary, ...(hasComparison ? comparison : [])].map((item) => item.year)
+  const years = [...new Set([...seriesYears, ...historyYears])].sort((a, b) => a - b)
   const primaryByYear = new Map(primary.map((item) => [item.year, item]))
   const comparisonByYear = new Map(comparison.map((item) => [item.year, item]))
   const data: PositionDatum[] = years.map((year) => ({
@@ -63,10 +72,13 @@ export function PositionChart({ comparison, comparisonLabel, hasComparison, kind
     comparison: hasComparison ? comparisonByYear.get(year)?.national ?? null : null,
     total: primaryByYear.get(year)?.nationalTotal ?? comparisonByYear.get(year)?.nationalTotal ?? null,
   }))
+  const hasHistory = historyYears.length > 0
+  // Município fora do universo do CLP em algum ano: a linha é interrompida em vez de ligar os anos avaliados.
+  const hasGap = hasHistory && data.some((item) => item.primary === null || (hasComparison && item.comparison === null))
   const maxTotal = Math.max(1, ...data.map((item) => item.total ?? 0))
   const period = years.length === 0 ? '' : years.length === 1 ? String(years[0]) : `${years[0]}–${years.at(-1)}`
   const commonLineProps = {
-    connectNulls: true,
+    connectNulls: false,
     strokeWidth: 3,
     type: 'monotone' as const,
   }
@@ -74,8 +86,13 @@ export function PositionChart({ comparison, comparisonLabel, hasComparison, kind
   return (
     <section className="series-chart position-chart min-w-0">
       <h2 className="section-title">Posição no Ranking{period ? ` (${period})` : ''}</h2>
-      <p className="section-description">Posição no ranking nacional ao longo dos anos. Quanto mais alto no gráfico, melhor a colocação.</p>
-      {data.length === 0 ? (
+      <p className="section-description">
+        Posição no ranking nacional ao longo dos anos. Quanto mais alto no gráfico, melhor a colocação.
+        {hasGap && (municipal
+          ? ` Anos sem ponto: município não avaliado naquele ano. ${MUNICIPAL_SCOPE_NOTE}`
+          : ' Anos sem ponto: sem posição publicada naquele ano.')}
+      </p>
+      {!hasHistory ? (
         <div className="chart-empty">Não há histórico de posição disponível.</div>
       ) : (
         <div className="chart-canvas min-w-0">
@@ -93,7 +110,11 @@ export function PositionChart({ comparison, comparisonLabel, hasComparison, kind
                 tickLine={false}
                 width={40}
               />
-              <Tooltip content={PositionTooltip} cursor={{ stroke: '#bfd0e0', strokeDasharray: '3 3' }} />
+              <Tooltip
+                content={(props) => <PositionTooltip {...props} municipal={municipal} />}
+                cursor={{ stroke: '#bfd0e0', strokeDasharray: '3 3' }}
+                filterNull={false}
+              />
               <Legend iconSize={17} iconType="plainline" wrapperStyle={{ color: '#404040', fontSize: 12, paddingTop: 20 }} />
               <Line {...commonLineProps} activeDot={lineDot(colors.primary, 6)} dataKey="primary" dot={lineDot(colors.primary)} name={primaryLabel} stroke={colors.primary} />
               {hasComparison && <Line {...commonLineProps} activeDot={lineDot(colors.comparison, 6)} dataKey="comparison" dot={lineDot(colors.comparison)} name={comparisonLabel} stroke={colors.comparison} />}

@@ -77,3 +77,10 @@ test('omite grupos sem destaque e mantém o vínculo dos indicadores com o pilar
   assert.deepEqual(groups.map(group => group.id), ['indicador'])
   assert.equal(groups[0].items[0].pillarId, pillar.id)
 })
+
+test('não cria destaque quando a nota de um dos anos foi atribuída sem dado na fonte', () => {
+  // Ex.: município sem dado de esgoto em 2025 recebe nota 0 e cai para o fim do ranking.
+  assert.deepEqual(items([result(2024, 5), result(2025, 400, { situacao_dado: 'SEM_DADO_FONTE' })], 'clp-municipios'), [])
+  assert.deepEqual(items([result(2024, 400, { situacao_dado: 'SEM_DADO_FONTE' }), result(2025, 5)], 'clp-municipios'), [])
+  assert.equal(items([result(2024, 18, { situacao_dado: 'INFORMADO' }), result(2025, 14, { situacao_dado: 'INFORMADO' })]).length, 1)
+})

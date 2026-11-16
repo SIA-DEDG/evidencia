@@ -6,7 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterable
 
-from sqlalchemy import create_engine, func, select, text, update
+from sqlalchemy import create_engine, func, inspect, select, text, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -28,8 +28,32 @@ from .models import (
     Territorio,
     UniversoEdicao,
 )
-from .parser import ParsedWorkbook
+from .parser import ParsedWorkbook, RankingValue, RawValue
 
+
+DATA_STATUS_REPORTED = "INFORMADO"
+DATA_STATUS_MISSING_AT_SOURCE = "SEM_DADO_FONTE"
+
+# Mesma regra de ranking_data_status, aplicada às cargas gravadas antes da coluna existir.
+_BACKFILL_MISSING_AT_SOURCE = text(
+    """
+    UPDATE resultado_ranking SET situacao_dado = 'SEM_DADO_FONTE'
+    WHERE nota_normalizada IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM observacao_indicador oi
+        WHERE oi.carga_importacao_id = resultado_ranking.carga_importacao_id
+          AND oi.componente_id = resultado_ranking.componente_id
+          AND oi.territorio_id = resultado_ranking.territorio_id
+          AND oi.ano_referencia = resultado_ranking.ano_referencia
+      )
+      AND EXISTS (
+        SELECT 1 FROM observacao_indicador oi
+        WHERE oi.carga_importacao_id = resultado_ranking.carga_importacao_id
+          AND oi.componente_id = resultado_ranking.componente_id
+          AND oi.ano_referencia = resultado_ranking.ano_referencia
+      )
+    """
+)
 
 STATE_CATALOG = {
     "AC": ("12", "Acre", "N"), "AL": ("27", "Alagoas", "NE"),
@@ -85,7 +109,44 @@ def initialize_database(engine: Engine) -> str:
                 "Bancos das versões 2 e 3 são migrados automaticamente; versões anteriores "
                 "exigem migração separada."
             )
+        _ensure_result_data_status(session)
         return row.valor
+
+
+def _ensure_result_data_status(session: Session) -> None:
+    """Acrescenta resultado_ranking.situacao_dado e marca as cargas antigas.
+
+    A coluna é aditiva e tem valor padrão: não muda a versão do esquema nem quebra leitores antigos.
+    """
+    columns = {column["name"] for column in inspect(session.connection()).get_columns("resultado_ranking")}
+    if "situacao_dado" in columns:
+        return
+    session.execute(
+        text(
+            "ALTER TABLE resultado_ranking "
+            "ADD COLUMN situacao_dado VARCHAR(30) NOT NULL DEFAULT 'INFORMADO'"
+        )
+    )
+    session.execute(_BACKFILL_MISSING_AT_SOURCE)
+
+
+def ranking_data_status(raw_values: list[RawValue], ranking_values: list[RankingValue]) -> list[str]:
+    """Classifica cada nota: SEM_DADO_FONTE quando a fonte publicou nota sem valor bruto
+    para o território, embora o indicador tenha valor bruto para outros territórios no mesmo ano.
+
+    Na prática a fonte atribui nota 0 nesses casos. Componentes sem nenhum valor bruto
+    (pilares, notas gerais, IBID) nunca são marcados.
+    """
+    raw_keys = {(row.component_code, row.territory_code, row.year) for row in raw_values}
+    raw_component_years = {(component, year) for component, _territory, year in raw_keys}
+    return [
+        DATA_STATUS_MISSING_AT_SOURCE
+        if row.score is not None
+        and (row.component_code, row.year) in raw_component_years
+        and (row.component_code, row.territory_code, row.year) not in raw_keys
+        else DATA_STATUS_REPORTED
+        for row in ranking_values
+    ]
 
 
 def _repair_se_territory_collision(session: Session) -> None:
@@ -426,6 +487,7 @@ def import_parsed_workbook(
                 )
                 for row in parsed.raw_values
             ]
+            data_status = ranking_data_status(parsed.raw_values, parsed.ranking_values)
             ranking_rows = [
                 dict(
                     carga_importacao_id=load_id, edicao_id=edition_id,
@@ -433,8 +495,9 @@ def import_parsed_workbook(
                     territorio_id=territories[row.territory_code].id,
                     ano_referencia=row.year, nota_normalizada=_decimal(row.score),
                     posicao=row.position, delta_posicao=row.delta,
+                    situacao_dado=status,
                 )
-                for row in parsed.ranking_values
+                for row, status in zip(parsed.ranking_values, data_status)
             ]
             for chunk in _chunks(raw_rows):
                 session.bulk_insert_mappings(ObservacaoIndicador, chunk)

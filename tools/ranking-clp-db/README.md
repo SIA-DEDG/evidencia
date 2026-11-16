@@ -156,4 +156,6 @@ A versão 0.5 separa territorialmente `UF + SE` (Sergipe) de `REGIAO + SE` (Sude
 
 A migração da versão 2 continua incluindo a ampliação de `territorio.codigo` de 20 para 80 caracteres. As migrações 2→3→4 são executadas automaticamente na próxima chamada a `init-db`, `audit-db` ou `import`. O esquema 5, que acrescenta governança sem alterar as tabelas de resultados, também é aceito sem downgrade.
 
+A versão 0.5.1 acrescenta `resultado_ranking.situacao_dado` (`INFORMADO` ou `SEM_DADO_FONTE`). A coluna é aditiva e não muda `schema_version`. Ela é criada automaticamente na próxima chamada a `init-db`, `audit-db` ou `import`, e as cargas já gravadas são marcadas na mesma transação. Notas de indicador sem valor bruto para o território, quando outros territórios têm valor bruto, passam a `SEM_DADO_FONTE`. Veja [docs/modelo-relacional.md](docs/modelo-relacional.md).
+
 Se o banco ainda estiver em `schema_version=1`, a carga é interrompida porque essa versão antecede o modelo municipal e requer uma migração separada ou um banco novo.

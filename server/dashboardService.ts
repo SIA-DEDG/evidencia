@@ -39,7 +39,11 @@ interface DetailResultRow {
   ano_referencia?: number
   nota: number | null
   posicao: number | null
+  /** INFORMADO ou SEM_DADO_FONTE (a fonte atribuiu a nota sem ter o dado do território). */
+  situacao_dado?: string
 }
+
+const MISSING_AT_SOURCE = 'SEM_DADO_FONTE'
 
 interface ComponentRow {
   id: string
@@ -92,6 +96,13 @@ const typeLabels: Record<string, string> = {
   PILAR: 'Pilar',
   DIMENSAO: 'Dimensão',
   INDICADOR: 'Indicador',
+}
+
+const levelArticle: Record<DetailRow['level'], string> = {
+  Grupo: 'o grupo',
+  Pilar: 'o pilar',
+  Dimensão: 'a dimensão',
+  Indicador: 'o indicador',
 }
 
 function numberValue(value: unknown): number | null {
@@ -337,6 +348,8 @@ interface InsightResultRow {
   posicao: number | null
   nota_comparacao: number | null
   posicao_comparacao: number | null
+  sem_dado: boolean | null
+  sem_dado_comparacao: boolean | null
 }
 
 const insightLevels = ['PILAR', 'DIMENSAO', 'INDICADOR'] as const
@@ -409,13 +422,21 @@ function buildInsightItems(
     const currentYear = current ? editionYearById.get(current.edicao_id) : undefined
     if (prefersEdition(editionYearById.get(row.edicao_id)!, currentYear, row.ano_referencia)) chosen.set(key, row)
   }
+  // Componente sem dado no ano selecionado (ex.: indicador do CLP Estados ainda não atualizado):
+  // usa o ano mais recente anterior, sinalizado em dataYear.
+  const latestBefore = new Map<string, InsightResultRow>()
+  for (const row of chosen.values()) {
+    if (row.ano_referencia >= selectedYear) continue
+    const latest = latestBefore.get(row.componente_id)
+    if (!latest || row.ano_referencia > latest.ano_referencia) latestBefore.set(row.componente_id, row)
+  }
 
   return items.flatMap((item) => {
     const history = years.map((year) => {
       const row = chosen.get(`${item.id}:${year}`)
       return { year, position: row?.posicao ?? null, comparisonPosition: row?.posicao_comparacao ?? null, total: row?.total ?? 0 }
     })
-    const current = chosen.get(`${item.id}:${selectedYear}`)
+    const current = chosen.get(`${item.id}:${selectedYear}`) ?? latestBefore.get(item.id)
     if (!current && history.every((point) => point.position === null && point.comparisonPosition === null)) return []
     return [{
       id: item.id,
@@ -426,6 +447,9 @@ function buildInsightItems(
       position: current?.posicao ?? null,
       total: current?.total ?? 0,
       history,
+      dataYear: current && current.ano_referencia !== selectedYear ? current.ano_referencia : undefined,
+      scoreMissingAtSource: current?.sem_dado === true || undefined,
+      comparisonScoreMissingAtSource: current?.sem_dado_comparacao === true || undefined,
     }]
   })
 }
@@ -566,6 +590,9 @@ function buildDetails(
     // Pilares e dimensões não têm ano próprio: vale o dado mais recente entre os componentes filhos.
     const childYears = childRows.flatMap((row) => row.updateYear ? [Number(row.updateYear)] : [])
     const updateYear = component.ultimo_ano_disponivel ?? (childYears.length ? Math.max(...childYears) : undefined)
+    // A consulta traz o dado mais recente até o ano selecionado; no CLP Estados muitos indicadores
+    // ainda não têm o ano do ranking e entram com o último ano publicado.
+    const dataYear = (primaryResult ?? comparisonResult ?? results[0])?.ano_referencia ?? selectedYear
     return {
       id: component.id,
       level,
@@ -581,7 +608,12 @@ function buildDetails(
       comparisonRegionalScore: comparison
         ? scoreText(kind, comparisonOfficialRegion?.nota ?? average(comparisonPeerResults))
         : undefined,
-      year: String(selectedYear),
+      year: String(dataYear),
+      yearNote: dataYear !== selectedYear
+        ? `Sem dado de ${selectedYear} para ${levelArticle[level]}; exibido o dado mais recente disponível (${dataYear}).`
+        : undefined,
+      missingAtSource: primaryResult?.situacao_dado === MISSING_AT_SOURCE || undefined,
+      comparisonMissingAtSource: comparisonResult?.situacao_dado === MISSING_AT_SOURCE || undefined,
       updateYear: updateYear ? String(updateYear) : undefined,
       description: component.descricao ?? undefined,
       unit: component.unidade_medida ?? undefined,
@@ -858,8 +890,9 @@ export class DashboardService {
         const detailResult = kind === 'ibid'
           // O IBID só traz a posição dos pilares em alguns anos: nos demais, ela sai da ordem das notas entre os estados.
           ? await client.query<DetailResultRow>(`
-              select componente_id, id, nota, posicao from (
-                select rr.componente_id, rr.territorio_id as id, rr.nota_normalizada::float8 as nota,
+              select componente_id, id, ano_referencia, nota, posicao, situacao_dado from (
+                select rr.componente_id, rr.territorio_id as id, rr.ano_referencia, rr.situacao_dado,
+                  rr.nota_normalizada::float8 as nota,
                   coalesce(rr.posicao, case when t.tipo = $5 and rr.nota_normalizada is not null then
                     rank() over (
                       partition by rr.componente_id, t.tipo = $5, rr.nota_normalizada is null
@@ -873,13 +906,17 @@ export class DashboardService {
               ) ranked
               where id = any($4::uuid[])
             `, [edition.id, componentIds, selectedYear, [...detailTerritoryIds], config.entityType])
+          // No CLP, cada componente traz o dado mais recente até o ano selecionado: vários indicadores
+          // dos Estados não têm o ano do ranking e entram com o último ano publicado (sinalizado na tabela).
           : await client.query<DetailResultRow>(`
-              select rr.componente_id, rr.territorio_id as id,
-                rr.nota_normalizada::float8 as nota, rr.posicao
+              select distinct on (rr.componente_id, rr.territorio_id)
+                rr.componente_id, rr.territorio_id as id, rr.ano_referencia,
+                rr.nota_normalizada::float8 as nota, rr.posicao, rr.situacao_dado
               from resultado_ranking rr
               where rr.edicao_id = $1 and rr.componente_id = any($2::uuid[])
-                and rr.ano_referencia = $3
+                and rr.ano_referencia <= $3 and rr.nota_normalizada is not null
                 and rr.territorio_id = any($4::uuid[])
+              order by rr.componente_id, rr.territorio_id, rr.ano_referencia desc
             `, [edition.id, componentIds, selectedYear, [...detailTerritoryIds]])
         const detailRows = detailResult.rows.map((row) => ({ ...row, nota: numberValue(row.nota) }))
         // Uma carga por indicador: a da edição do ano selecionado; se ela não tiver, a da edição mais recente.
@@ -919,9 +956,9 @@ export class DashboardService {
         type HighlightYearRow = DetailResultRow & { edicao_id: string; ano_referencia: number }
         const highlightResult = kind === 'ibid'
           ? await client.query<HighlightYearRow>(`
-              select componente_id, edicao_id, id, ano_referencia, nota, posicao from (
+              select componente_id, edicao_id, id, ano_referencia, nota, posicao, situacao_dado from (
                 select rr.componente_id, rr.edicao_id, rr.territorio_id as id, rr.ano_referencia,
-                  rr.nota_normalizada::float8 as nota,
+                  rr.nota_normalizada::float8 as nota, rr.situacao_dado,
                   coalesce(rr.posicao, case when rr.nota_normalizada is not null then
                     rank() over (
                       partition by rr.edicao_id, rr.componente_id, rr.ano_referencia
@@ -937,7 +974,7 @@ export class DashboardService {
             `, [editionIds, componentIds, selectedYear, primary.id, config.entityType])
           : await client.query<HighlightYearRow>(`
               select rr.componente_id, rr.edicao_id, rr.territorio_id as id, rr.ano_referencia,
-                rr.nota_normalizada::float8 as nota, rr.posicao
+                rr.nota_normalizada::float8 as nota, rr.posicao, rr.situacao_dado
               from resultado_ranking rr
               where rr.edicao_id = any($1::uuid[]) and rr.componente_id = any($2::uuid[])
                 and rr.ano_referencia between $3::integer - 1 and $3::integer and rr.territorio_id = $4
@@ -958,7 +995,7 @@ export class DashboardService {
           // Alguns anos (ex.: IBID antes de 2025) não têm posição oficial; nesses, a posição sai da ordem das notas.
           const insightResult = await client.query<InsightResultRow>(`
             with base as (
-              select rr.componente_id, rr.edicao_id, rr.ano_referencia, rr.territorio_id, rr.nota_normalizada, rr.posicao
+              select rr.componente_id, rr.edicao_id, rr.ano_referencia, rr.territorio_id, rr.nota_normalizada, rr.posicao, rr.situacao_dado
               from resultado_ranking rr
               join territorio t on t.id = rr.territorio_id
               where rr.edicao_id = any($1::uuid[]) and rr.componente_id = any($2::uuid[]) and t.tipo = $3
@@ -969,11 +1006,14 @@ export class DashboardService {
                 max(nota_normalizada) filter (where territorio_id = $4) as nota,
                 max(posicao) filter (where territorio_id = $4) as posicao_oficial,
                 max(nota_normalizada) filter (where territorio_id = $5) as nota_comparacao,
-                max(posicao) filter (where territorio_id = $5) as posicao_comparacao_oficial
+                max(posicao) filter (where territorio_id = $5) as posicao_comparacao_oficial,
+                bool_or(situacao_dado = 'SEM_DADO_FONTE') filter (where territorio_id = $4) as sem_dado,
+                bool_or(situacao_dado = 'SEM_DADO_FONTE') filter (where territorio_id = $5) as sem_dado_comparacao
               from base
               group by componente_id, edicao_id, ano_referencia
             )
             select g.componente_id, g.edicao_id, g.ano_referencia, g.media, g.total, g.nota::float8 as nota, g.nota_comparacao::float8 as nota_comparacao,
+              g.sem_dado, g.sem_dado_comparacao,
               coalesce(g.posicao_oficial, case when g.nota is not null then 1 + (
                 select count(*) from base b
                 where b.componente_id = g.componente_id and b.edicao_id = g.edicao_id

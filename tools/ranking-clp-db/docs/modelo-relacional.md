@@ -33,6 +33,7 @@ erDiagram
 - `universo_edicao.atributos` preserva o perfil municipal variável por carga (capital, população, coordenadas, região e demais campos descritivos).
 - `arquivo_fonte` usa SHA-256 e versão. Uma revisão da mesma edição não apaga silenciosamente a carga anterior.
 - `-` na planilha vira `NULL`, nunca zero.
+- `resultado_ranking.situacao_dado` separa a nota publicada com dado (`INFORMADO`) da nota que a fonte atribuiu sem ter o dado do território (`SEM_DADO_FONTE`). A marcação vale quando o indicador tem valor bruto para outros territórios no mesmo ano e carga, mas não para aquele. Na prática, a fonte atribui nota 0 nesses casos. A nota oficial é mantida porque entra no cálculo de pilares e da nota geral, e o painel exibe o aviso.
 - mapas e gráficos não são persistidos: podem ser recalculados a partir de resultados e territórios.
 - `territorio` é compartilhado entre pesquisas. A identidade lógica sempre usa `tipo + codigo`, separando, por exemplo, a UF Sergipe (`UF + SE`) da região Sudeste (`REGIAO + SE`).
 - No IBID, o arquivo histórico fornece 2014–2024 e os quadros completos fornecem 2025. A sobreposição de 2025 é usada como controle de reconciliação, não como fato duplicado.

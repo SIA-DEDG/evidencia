@@ -84,15 +84,41 @@ export const levelPlural: Record<InsightGroup['level'], string> = {
   Indicador: 'Indicadores',
 }
 
+/** Avisos de qualidade do dado que acompanham cada item nos gráficos de insight. */
+interface DataNotes {
+  dataYear?: number
+  primaryMissing?: boolean
+  comparisonMissing?: boolean
+}
+
+const MISSING_AT_SOURCE_SUFFIX = ' · sem dado na fonte (nota atribuída)'
+
+function dataNotesOf(item: ComponentInsight): DataNotes {
+  return { dataYear: item.dataYear, primaryMissing: item.scoreMissingAtSource, comparisonMissing: item.comparisonScoreMissingAtSource }
+}
+
+function missingSuffix(notes: DataNotes | undefined, dataKey: unknown) {
+  if (dataKey === 'primary' || dataKey === 'gap') return notes?.primaryMissing ? MISSING_AT_SOURCE_SUFFIX : ''
+  if (dataKey === 'comparison' || dataKey === 'comparisonGap') return notes?.comparisonMissing ? MISSING_AT_SOURCE_SUFFIX : ''
+  return ''
+}
+
+function DataYearNote({ notes }: { notes?: DataNotes }) {
+  if (!notes?.dataYear) return null
+  return <p className="chart-tooltip-note">Sem dado do ano selecionado; exibido o de {notes.dataYear}.</p>
+}
+
 function ScoreTooltip({ active, label, payload, decimals }: TooltipContentProps & { decimals: number }) {
   if (!active || !payload.length) return null
+  const notes = (payload[0]?.payload as { notes?: DataNotes } | undefined)?.notes
   return (
     <div className="chart-tooltip">
       <strong>{label}</strong>
+      <DataYearNote notes={notes} />
       {payload.map((entry) => (
         <p key={String(entry.dataKey)}>
           <span style={{ backgroundColor: entry.color }} />
-          {entry.name}: {formatScore(entry.value as number | null, decimals)}
+          {entry.name}: {formatScore(entry.value as number | null, decimals)}{missingSuffix(notes, entry.dataKey)}
         </p>
       ))}
     </div>
@@ -125,7 +151,7 @@ export function InsightProfileChart({ comparisonLabel, decimals, hasComparison, 
   const ceiling = scoreCeiling(kind, scoredItems.flatMap((item) => [item.score, item.comparisonScore, item.nationalAverage]))
   // O tipo de gráfico segue o total do nível; a busca só troca para barras quando sobram poucos eixos.
   const useRadar = scoredItems.length >= RADAR_MIN_ITEMS && scoredItems.length <= RADAR_MAX_ITEMS && items.length >= RADAR_MIN_ITEMS
-  const data = items.map((item) => ({ name: item.name, primary: item.score, comparison: item.comparisonScore, national: item.nationalAverage }))
+  const data = items.map((item) => ({ name: item.name, primary: item.score, comparison: item.comparisonScore, national: item.nationalAverage, notes: dataNotesOf(item) }))
   const scope = items.length === 1 ? ` · ${items[0].name}` : ` por ${level.toLowerCase()}`
   const rowHeight = showComparison ? 42 : 32
   const barHeight = Math.max(searching ? 120 : 220, 72 + items.length * rowHeight)
@@ -191,24 +217,27 @@ interface GapDatum {
   score: number | null
   comparisonScore: number | null
   nationalAverage: number
+  notes: DataNotes
 }
 
 function GapTooltip({ active, payload, comparisonLabel, decimals, primaryLabel, showComparison }: TooltipContentProps & { comparisonLabel: string; decimals: number; primaryLabel: string; showComparison: boolean }) {
   if (!active || !payload.length) return null
   const datum = payload[0]?.payload as GapDatum | undefined
   if (!datum) return null
-  const scoreLine = (label: string, score: number | null, gap: number | null) => `${label}: ${formatScore(score, decimals)}${gap === null ? '' : ` (${formatSigned(gap, decimals)})`}`
+  const scoreLine = (label: string, score: number | null, gap: number | null, dataKey: string) =>
+    `${label}: ${formatScore(score, decimals)}${gap === null ? '' : ` (${formatSigned(gap, decimals)})`}${missingSuffix(datum.notes, dataKey)}`
   return (
     <div className="chart-tooltip">
       <strong>{datum.name}</strong>
+      <DataYearNote notes={datum.notes} />
       {showComparison ? (
         <>
-          <p>{scoreLine(primaryLabel, datum.score, datum.gap)}</p>
-          <p>{scoreLine(comparisonLabel, datum.comparisonScore, datum.comparisonGap)}</p>
+          <p>{scoreLine(primaryLabel, datum.score, datum.gap, 'gap')}</p>
+          <p>{scoreLine(comparisonLabel, datum.comparisonScore, datum.comparisonGap, 'comparisonGap')}</p>
         </>
       ) : (
         <>
-          <p>Nota: {formatScore(datum.score, decimals)}</p>
+          <p>Nota: {formatScore(datum.score, decimals)}{missingSuffix(datum.notes, 'gap')}</p>
           {datum.gap !== null && <p>Diferença: {formatSigned(datum.gap, decimals)}</p>}
         </>
       )}
@@ -245,6 +274,7 @@ export function InsightGapChart({ comparisonLabel, decimals, hasComparison, item
       score: item.score,
       comparisonScore: item.comparisonScore,
       nationalAverage: item.nationalAverage,
+      notes: dataNotesOf(item),
     }]
   })
   const data = allData.filter((item) => matchesSearch(item.name, searchQuery))

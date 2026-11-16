@@ -223,6 +223,11 @@ class ResultadoRanking(Base):
     nota_normalizada: Mapped[float | None] = mapped_column(Numeric(20, 10))
     posicao: Mapped[int | None] = mapped_column(Integer)
     delta_posicao: Mapped[int | None] = mapped_column(Integer)
+    # INFORMADO: a fonte publicou o dado. SEM_DADO_FONTE: a fonte atribuiu nota sem valor bruto
+    # para este território, embora o indicador tenha valor bruto para os demais naquele ano.
+    situacao_dado: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="INFORMADO", server_default="INFORMADO"
+    )
 
 
 class SchemaMeta(Base):
