@@ -73,8 +73,8 @@ function ScoreValue({ missingAtSource, value }: { missingAtSource?: boolean; val
 const unpublishedLabel = 'não divulgado'
 
 /**
- * Ano do dado, destacado quando é anterior ao ano selecionado. Sem nota publicada até o ano
- * selecionado, mostra a etiqueta "não divulgado" com o motivo no tooltip.
+ * Ano do dado, destacado quando é diferente do ano selecionado. Sem nenhuma nota publicada,
+ * mostra a etiqueta "não divulgado" com o motivo no tooltip.
  */
 function YearValue({ row }: { row: DetailRow }) {
   const tooltipId = useId()
@@ -422,7 +422,7 @@ export function DetailTable({
             <li><span className="detail-year-lagged">Ano destacado</span>: o componente não tem dado do ano selecionado; é exibido o dado mais recente disponível.</li>
           )}
           {dataNotes.unpublished && (
-            <li><span className="detail-unpublished-tag">{unpublishedLabel}</span> A fonte não publica a nota do componente até o ano selecionado. Passe o mouse sobre a etiqueta para ver o motivo.</li>
+            <li><span className="detail-unpublished-tag">{unpublishedLabel}</span> A fonte não publica a nota do componente. Passe o mouse sobre a etiqueta para ver o motivo.</li>
           )}
           {dataNotes.missing && (
             <li><span className="detail-missing-tag">sem dado</span> {missingAtSourceText} A nota oficial é mantida, mas não indica desempenho real.</li>

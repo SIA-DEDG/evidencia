@@ -113,8 +113,8 @@ const levelDemonstrative: Record<DetailRow['level'], string> = {
 }
 
 /**
- * Motivo de um componente não ter nota até o ano selecionado: a fonte só passou a publicá-lo depois
- * (ex.: dimensões do IBID, a partir de 2025) ou nunca publica a nota (ex.: indicadores do IBID).
+ * Motivo de um componente não ter nenhuma nota na edição exibida: a fonte nunca publica a nota
+ * (ex.: indicadores do IBID) ou só a publica a partir de um ano posterior, em outra edição.
  * Sem motivo conhecido (há nota de outros territórios), não há aviso.
  */
 function unpublishedNote(level: DetailRow['level'], firstYear: number | undefined, selectedYear: number) {
@@ -443,12 +443,16 @@ function buildInsightItems(
     if (prefersEdition(editionYearById.get(row.edicao_id)!, currentYear, row.ano_referencia)) chosen.set(key, row)
   }
   // Componente sem dado no ano selecionado (ex.: indicador do CLP Estados ainda não atualizado):
-  // usa o ano mais recente anterior, sinalizado em dataYear.
+  // usa o ano mais recente anterior, sinalizado em dataYear. Sem nenhum ano anterior (ex.: dimensões
+  // do IBID antes de 2025), usa o mais recente disponível, como a tabela detalhada.
   const latestBefore = new Map<string, InsightResultRow>()
+  const latest = new Map<string, InsightResultRow>()
   for (const row of chosen.values()) {
+    const newest = latest.get(row.componente_id)
+    if (!newest || row.ano_referencia > newest.ano_referencia) latest.set(row.componente_id, row)
     if (row.ano_referencia >= selectedYear) continue
-    const latest = latestBefore.get(row.componente_id)
-    if (!latest || row.ano_referencia > latest.ano_referencia) latestBefore.set(row.componente_id, row)
+    const before = latestBefore.get(row.componente_id)
+    if (!before || row.ano_referencia > before.ano_referencia) latestBefore.set(row.componente_id, row)
   }
 
   return items.flatMap((item) => {
@@ -456,7 +460,7 @@ function buildInsightItems(
       const row = chosen.get(`${item.id}:${year}`)
       return { year, position: row?.posicao ?? null, comparisonPosition: row?.posicao_comparacao ?? null, total: row?.total ?? 0 }
     })
-    const current = chosen.get(`${item.id}:${selectedYear}`) ?? latestBefore.get(item.id)
+    const current = chosen.get(`${item.id}:${selectedYear}`) ?? latestBefore.get(item.id) ?? latest.get(item.id)
     if (!current && history.every((point) => point.position === null && point.comparisonPosition === null)) return []
     return [{
       id: item.id,
@@ -613,9 +617,14 @@ function buildDetails(
     const childYears = childRows.flatMap((row) => row.updateYear ? [Number(row.updateYear)] : [])
     const updateYear = component.ultimo_ano_disponivel ?? (childYears.length ? Math.max(...childYears) : undefined)
     // A consulta traz o dado mais recente até o ano selecionado; no CLP Estados muitos indicadores
-    // ainda não têm o ano do ranking e entram com o último ano publicado.
-    // Sem nenhuma nota até o ano selecionado, não há ano do dado: o motivo vai em unpublishedNote.
+    // ainda não têm o ano do ranking e entram com o último ano publicado. Sem dado até o ano
+    // selecionado, vem o mais recente disponível. Sem nenhuma nota, não há ano do dado: o motivo
+    // vai em unpublishedNote.
     const dataYear = (primaryResult ?? comparisonResult ?? results[0])?.ano_referencia
+    const firstYear = firstYearByComponent.get(component.id)
+    const laggedReason = firstYear !== undefined && firstYear > selectedYear
+      ? `A fonte só divulga a nota ${levelDemonstrative[level]} a partir de ${firstYear}`
+      : `Sem dado de ${selectedYear} para ${levelArticle[level]}`
     return {
       id: component.id,
       level,
@@ -633,11 +642,9 @@ function buildDetails(
         : undefined,
       year: dataYear === undefined ? undefined : String(dataYear),
       yearNote: dataYear !== undefined && dataYear !== selectedYear
-        ? `Sem dado de ${selectedYear} para ${levelArticle[level]}; exibido o dado mais recente disponível (${dataYear}).`
+        ? `${laggedReason}; exibido o dado mais recente disponível (${dataYear}).`
         : undefined,
-      unpublishedNote: results.length
-        ? undefined
-        : unpublishedNote(level, firstYearByComponent.get(component.id), selectedYear),
+      unpublishedNote: results.length ? undefined : unpublishedNote(level, firstYear, selectedYear),
       missingAtSource: primaryResult?.situacao_dado === MISSING_AT_SOURCE || undefined,
       comparisonMissingAtSource: comparisonResult?.situacao_dado === MISSING_AT_SOURCE || undefined,
       updateYear: updateYear ? String(updateYear) : undefined,
@@ -915,6 +922,8 @@ export class DashboardService {
         if (kind === 'ibid' && comparisonScopeTerritory?.id) detailTerritoryIds.add(comparisonScopeTerritory.id)
         // Cada componente traz o dado mais recente até o ano selecionado: vários indicadores dos Estados
         // do CLP não têm o ano do ranking e entram com o último ano publicado (sinalizado na tabela).
+        // Sem nenhum dado até o ano selecionado (ex.: dimensões do IBID antes de 2025, indicadores
+        // criados depois), entra o dado mais recente disponível, também sinalizado.
         const detailResult = kind === 'ibid'
           // O IBID só traz a posição dos pilares em alguns anos: nos demais, ela sai da ordem das notas
           // entre os estados no ano do dado.
@@ -933,10 +942,10 @@ export class DashboardService {
                 from resultado_ranking rr
                 join territorio t on t.id = rr.territorio_id
                 where rr.edicao_id = $1 and rr.componente_id = any($2::uuid[])
-                  and rr.ano_referencia <= $3 and rr.nota_normalizada is not null
+                  and rr.nota_normalizada is not null
               ) ranked
               where id = any($4::uuid[])
-              order by componente_id, id, ano_referencia desc
+              order by componente_id, id, ano_referencia <= $3 desc, ano_referencia desc
             `, [edition.id, componentIds, selectedYear, [...detailTerritoryIds], config.entityType])
           : await client.query<DetailResultRow>(`
               select distinct on (rr.componente_id, rr.territorio_id)
@@ -944,14 +953,16 @@ export class DashboardService {
                 rr.nota_normalizada::float8 as nota, rr.posicao, rr.situacao_dado
               from resultado_ranking rr
               where rr.edicao_id = $1 and rr.componente_id = any($2::uuid[])
-                and rr.ano_referencia <= $3 and rr.nota_normalizada is not null
+                and rr.nota_normalizada is not null
                 and rr.territorio_id = any($4::uuid[])
-              order by rr.componente_id, rr.territorio_id, rr.ano_referencia desc
+              order by rr.componente_id, rr.territorio_id, rr.ano_referencia <= $3 desc, rr.ano_referencia desc
             `, [edition.id, componentIds, selectedYear, [...detailTerritoryIds]])
         const detailRows = detailResult.rows.map((row) => ({ ...row, nota: numberValue(row.nota) }))
         // Componentes sem nota até o ano selecionado: o primeiro ano publicado diz se a fonte só passou
         // a divulgá-los depois (ex.: dimensões do IBID) ou se nunca divulga (ex.: indicadores do IBID).
-        const componentsWithData = new Set(detailRows.map((row) => row.componente_id))
+        const componentsWithData = new Set(detailRows.flatMap((row) => (
+          row.ano_referencia !== undefined && row.ano_referencia <= selectedYear ? [row.componente_id] : []
+        )))
         const componentsWithoutData = componentIds.filter((id) => !componentsWithData.has(id))
         const firstYearByComponent = new Map<string, number>()
         if (componentsWithoutData.length) {

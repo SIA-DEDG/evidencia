@@ -98,14 +98,14 @@ export interface DetailRow {
   comparisonNationalScore?: string
   comparisonRegionalRank?: string
   comparisonRegionalScore?: string
-  /** Ano do dado exibido: o selecionado ou, se o componente não tiver esse ano, o mais recente anterior. */
-  year?: string
-  /** Explica por que o ano do dado é anterior ao selecionado. */
-  yearNote?: string
   /**
-   * A fonte não publica nota do componente até o ano selecionado, e o motivo é este texto
-   * (ex.: dimensões do IBID só existem a partir de 2025; indicadores do IBID não têm nota divulgada).
+   * Ano do dado exibido: o selecionado; se o componente não tiver esse ano, o mais recente anterior;
+   * sem nenhum anterior (ex.: dimensões do IBID antes de 2025), o mais recente disponível.
    */
+  year?: string
+  /** Explica por que o ano do dado é diferente do selecionado. */
+  yearNote?: string
+  /** A fonte não publica nota do componente (ex.: indicadores do IBID), e o motivo é este texto. */
   unpublishedNote?: string
   /** A fonte não tinha o dado do território principal e atribuiu a nota exibida (em geral 0). */
   missingAtSource?: boolean
@@ -140,7 +140,10 @@ export interface ComponentInsight {
   position: number | null
   total: number
   history: InsightPositionPoint[]
-  /** Ano do dado quando o componente não tem o ano selecionado e entra com o mais recente anterior. */
+  /**
+   * Ano do dado quando o componente não tem o ano selecionado: o mais recente anterior ou, sem
+   * nenhum anterior, o mais recente disponível.
+   */
   dataYear?: number
   /** A fonte atribuiu a nota sem ter o dado do território (principal ou comparação). */
   scoreMissingAtSource?: boolean
