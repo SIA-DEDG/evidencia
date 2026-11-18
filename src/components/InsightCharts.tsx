@@ -103,6 +103,23 @@ function missingSuffix(notes: DataNotes | undefined, dataKey: unknown) {
   return ''
 }
 
+/**
+ * Primeiro ano em que algum território tem nota no nível. Antes dele, a fonte não publicava o nível
+ * (ex.: dimensões do IBID, só a partir de 2025), o que é diferente de um território sem nota.
+ */
+function firstPublishedYear(items: ComponentInsight[]) {
+  const years = items.flatMap((item) => item.history.filter((point) => point.total > 0).map((point) => point.year))
+  return years.length ? Math.min(...years) : undefined
+}
+
+/** Motivo de o nível não ter nota no ano selecionado, quando a fonte só passou a publicá-lo depois. */
+function unpublishedReason(items: ComponentInsight[], level: InsightGroup['level'], year: string) {
+  const firstYear = firstPublishedYear(items)
+  return firstYear !== undefined && firstYear > Number(year)
+    ? ` A fonte só divulga ${levelPlural[level].toLowerCase()} a partir de ${firstYear}.`
+    : ''
+}
+
 function DataYearNote({ notes }: { notes?: DataNotes }) {
   if (!notes?.dataYear) return null
   return <p className="chart-tooltip-note">Sem dado do ano selecionado; exibido o de {notes.dataYear}.</p>
@@ -164,7 +181,9 @@ export function InsightProfileChart({ comparisonLabel, decimals, hasComparison, 
       </p>
       {items.length === 0 ? (
         <div className="chart-empty">
-          {scoredItems.length === 0 ? `Não há ${levelPlural[level].toLowerCase()} com nota em ${year}.` : `Nenhum resultado para “${searchQuery?.trim()}”.`}
+          {scoredItems.length === 0
+            ? `Não há ${levelPlural[level].toLowerCase()} com nota em ${year}.${unpublishedReason(allItems, level, year)}`
+            : `Nenhum resultado para “${searchQuery?.trim()}”.`}
         </div>
       ) : (
       <div className={useRadar ? undefined : 'insight-rows-scroll'} style={useRadar ? undefined : { maxHeight: 72 + VISIBLE_ROWS * rowHeight }}>
@@ -261,7 +280,7 @@ function GapLabel({ decimals, value, viewBox }: LabelProps & { decimals: number 
   )
 }
 
-export function InsightGapChart({ comparisonLabel, decimals, hasComparison, items, kind, metricLabel, primaryLabel, searchQuery, source, year }: InsightChartProps) {
+export function InsightGapChart({ comparisonLabel, decimals, hasComparison, items, kind, level, metricLabel, primaryLabel, searchQuery, source, year }: InsightChartProps) {
   const colors = getDashboardChartColors(kind)
   const showComparison = hasComparison && items.some((item) => item.comparisonScore !== null && item.nationalAverage !== null)
   const allData: GapDatum[] = items.flatMap((item) => {
@@ -295,7 +314,9 @@ export function InsightGapChart({ comparisonLabel, decimals, hasComparison, item
       </p>
       {data.length === 0 ? (
         <div className="chart-empty">
-          {allData.length === 0 ? 'Não há notas disponíveis para comparar com a média do Brasil.' : `Nenhum resultado para “${searchQuery?.trim()}”.`}
+          {allData.length === 0
+            ? `Não há notas disponíveis para comparar com a média do Brasil.${unpublishedReason(items, level, year)}`
+            : `Nenhum resultado para “${searchQuery?.trim()}”.`}
         </div>
       ) : (
         <div className="insight-rows-scroll" style={{ maxHeight: gapOverhead + VISIBLE_ROWS * gapRowHeight }}>
@@ -356,7 +377,11 @@ export function InsightPositionHeatmap({ comparisonLabel, hasComparison, items, 
   const best = municipal ? '#3b2270' : '#0b4a9a'
   const worst = municipal ? '#efeaf8' : '#e3edf8'
   const showComparison = hasComparisonPositions({ hasComparison, items })
-  const years = items[0]?.history.map((point) => point.year) ?? []
+  // Os anos anteriores à publicação do nível ficam de fora (ex.: dimensões do IBID antes de 2025);
+  // os anos sem posição depois disso seguem como "—".
+  const firstYear = firstPublishedYear(items)
+  const history = (item: ComponentInsight) => item.history.filter((point) => firstYear === undefined || point.year >= firstYear)
+  const years = items[0] ? history(items[0]).map((point) => point.year) : []
   const period = years.length > 1 ? `de ${years[0]} a ${years.at(-1)}` : years[0] ? `em ${years[0]}` : ''
   const territories = [
     { key: 'position' as const, label: primaryLabel, color: colors.primary },
@@ -385,7 +410,7 @@ export function InsightPositionHeatmap({ comparisonLabel, hasComparison, items, 
                 {showComparison && (
                   <td className="pillar-heatmap-territory" style={{ color: territory.color }} title={territory.label}>{territory.label}</td>
                 )}
-                {item.history.map((point) => {
+                {history(item).map((point) => {
                   const position = point[territory.key]
                   if (position === null) return <td className="pillar-heatmap-empty" key={point.year}>—</td>
                   const amount = point.total > 1 ? (position - 1) / (point.total - 1) : 0

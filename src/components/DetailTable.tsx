@@ -70,7 +70,12 @@ function ScoreValue({ missingAtSource, value }: { missingAtSource?: boolean; val
   )
 }
 
-/** Ano do dado, destacado quando é anterior ao ano selecionado. */
+const unpublishedLabel = 'não divulgado'
+
+/**
+ * Ano do dado, destacado quando é anterior ao ano selecionado. Sem nota publicada até o ano
+ * selecionado, mostra a etiqueta "não divulgado" com o motivo no tooltip.
+ */
 function YearValue({ row }: { row: DetailRow }) {
   const tooltipId = useId()
   const triggerRef = useRef<HTMLSpanElement>(null)
@@ -103,11 +108,12 @@ function YearValue({ row }: { row: DetailRow }) {
     }
   }, [positionTooltip, tooltipOpen])
 
-  if (!row.yearNote) return <>{cellValue(row.year)}</>
+  const note = row.yearNote ?? row.unpublishedNote
+  if (!note) return <>{cellValue(row.year)}</>
   return (
     <span
       aria-describedby={tooltipOpen ? tooltipId : undefined}
-      className="detail-year-lagged detail-year-tooltip-trigger"
+      className={`${row.yearNote ? 'detail-year-lagged ' : ''}detail-year-tooltip-trigger`}
       onBlur={() => setTooltipOpen(false)}
       onFocus={() => { positionTooltip(); setTooltipOpen(true) }}
       onMouseEnter={() => { positionTooltip(); setTooltipOpen(true) }}
@@ -115,8 +121,8 @@ function YearValue({ row }: { row: DetailRow }) {
       ref={triggerRef}
       tabIndex={0}
     >
-      {cellValue(row.year)}
-      <span className="sr-only">: {row.yearNote}</span>
+      {row.yearNote ? cellValue(row.year) : <span className="detail-unpublished-tag">{unpublishedLabel}</span>}
+      <span className="sr-only">: {note}</span>
       {tooltipOpen && createPortal(
         <span
           className="detail-year-tooltip"
@@ -128,7 +134,7 @@ function YearValue({ row }: { row: DetailRow }) {
             top: tooltipPosition.top,
           } as React.CSSProperties}
         >
-          {row.yearNote}
+          {note}
         </span>,
         document.body,
       )}
@@ -137,9 +143,10 @@ function YearValue({ row }: { row: DetailRow }) {
 }
 
 function collectDataNotes(rows: DetailRow[]) {
-  const notes = { lagged: false, missing: false }
+  const notes = { lagged: false, missing: false, unpublished: false }
   const visit = (items: DetailRow[]) => items.forEach((row) => {
     if (row.yearNote) notes.lagged = true
+    if (row.unpublishedNote) notes.unpublished = true
     if (row.missingAtSource || row.comparisonMissingAtSource) notes.missing = true
     if (row.children) visit(row.children)
   })
@@ -252,7 +259,7 @@ export function DetailTable({
       const isDetailsOpen = openDetails.has(row.id)
       const hasChildren = Boolean(row.children?.length)
       const striped = visibleIndex.value++ % 2 === 0
-      const hasMoreInformation = Boolean(row.year?.trim() || row.description?.trim() || row.unit?.trim() || row.source?.trim() || row.responsibility)
+      const hasMoreInformation = Boolean(row.year?.trim() || row.unpublishedNote || row.description?.trim() || row.unit?.trim() || row.source?.trim() || row.responsibility)
       const comparisonSelected = comparisonEnabled && mobileTerritory === 'comparison'
       const rank = comparisonSelected
         ? mobileScope === 'national' ? row.comparisonNationalRank : row.comparisonRegionalRank
@@ -301,7 +308,13 @@ export function DetailTable({
             <tr className="detail-mobile-details-row">
               <td colSpan={showWeight ? 4 : 3}>
                 <dl>
-                  <div><dt>Ano do dado</dt><dd>{cellValue(row.year)}{row.yearNote ? <span className="detail-mobile-note">{row.yearNote}</span> : null}</dd></div>
+                  <div>
+                    <dt>Ano do dado</dt>
+                    <dd>
+                      {row.unpublishedNote ? <span className="detail-unpublished-tag">{unpublishedLabel}</span> : cellValue(row.year)}
+                      {row.yearNote || row.unpublishedNote ? <span className="detail-mobile-note">{row.yearNote ?? row.unpublishedNote}</span> : null}
+                    </dd>
+                  </div>
                   <div><dt>Descrição</dt><dd>{cellValue(row.description)}</dd></div>
                   <div><dt>Unidade do indicador</dt><dd title={row.unit}>{formatIndicatorUnit(row.unit)}</dd></div>
                   <ResponsibilityDetails responsibility={row.responsibility} />
@@ -403,10 +416,13 @@ export function DetailTable({
           </table>
         </div>
       </div>
-      {(dataNotes.lagged || dataNotes.missing) && (
+      {(dataNotes.lagged || dataNotes.missing || dataNotes.unpublished) && (
         <ul className="detail-table-legend">
           {dataNotes.lagged && (
             <li><span className="detail-year-lagged">Ano destacado</span>: o componente não tem dado do ano selecionado; é exibido o dado mais recente disponível.</li>
+          )}
+          {dataNotes.unpublished && (
+            <li><span className="detail-unpublished-tag">{unpublishedLabel}</span> A fonte não publica a nota do componente até o ano selecionado. Passe o mouse sobre a etiqueta para ver o motivo.</li>
           )}
           {dataNotes.missing && (
             <li><span className="detail-missing-tag">sem dado</span> {missingAtSourceText} A nota oficial é mantida, mas não indica desempenho real.</li>

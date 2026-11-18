@@ -102,6 +102,11 @@ export interface DetailRow {
   year?: string
   /** Explica por que o ano do dado é anterior ao selecionado. */
   yearNote?: string
+  /**
+   * A fonte não publica nota do componente até o ano selecionado, e o motivo é este texto
+   * (ex.: dimensões do IBID só existem a partir de 2025; indicadores do IBID não têm nota divulgada).
+   */
+  unpublishedNote?: string
   /** A fonte não tinha o dado do território principal e atribuiu a nota exibida (em geral 0). */
   missingAtSource?: boolean
   comparisonMissingAtSource?: boolean

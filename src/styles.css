@@ -1243,6 +1243,7 @@
   .detail-update-note { @apply text-[11px] font-normal leading-tight text-muted dark:text-slate-400; }
   .detail-score-missing { @apply inline-flex flex-wrap items-center justify-center gap-1; }
   .detail-missing-tag { @apply inline-block rounded bg-amber-100 px-1 py-px align-middle text-[10px] font-semibold uppercase leading-4 tracking-normal text-amber-800 dark:bg-amber-900/40 dark:text-amber-200; }
+  .detail-unpublished-tag { @apply inline-block whitespace-nowrap rounded bg-slate-100 px-1 py-px align-middle text-[10px] font-semibold uppercase leading-4 tracking-normal text-slate-600 dark:bg-slate-800 dark:text-slate-300; }
   .detail-year-lagged { @apply font-semibold text-amber-700 underline decoration-dotted underline-offset-2 dark:text-amber-300; }
   .detail-year-tooltip-trigger { @apply cursor-help outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[#2f8fd1]/40; }
   .detail-year-tooltip {
