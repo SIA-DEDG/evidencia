@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { HomeAssistantV3 } from './HomeAssistantV3'
+import { HomeNewsV3 } from './HomeNewsV3'
 import { HomeV3Intro } from './HomeV3Intro'
 
 type StudyPage = 'ibid' | 'clp-estados' | 'clp-municipios'
@@ -45,8 +47,8 @@ const studyCards: StudyCard[] = [
       { label: 'Economia Criativa', tone: 'green' },
       { label: 'Conhecimento e Tecnologia', tone: 'green' },
     ],
-    source: 'INPI – Coordenação-Geral de Economia e Inovação',
-    period: '2014–2026',
+    source: 'INPI, Coordenação-Geral de Economia e Inovação',
+    period: '2015 - 2025',
     dashboardLabel: 'Ir para o painel IBID',
     moreLabel: 'Saiba mais sobre o IBID',
     moreHref: 'https://www.gov.br/inpi/pt-br/inpi-data/indice-brasil-de-inovacao-e-desenvolvimento-ibid',
@@ -74,7 +76,7 @@ const studyCards: StudyCard[] = [
       'Sustentabilidade Social',
     ].map((label) => ({ label })),
     source: 'Centro de Liderança Pública (CLP)',
-    period: '2015–2025',
+    period: '2015 - 2025',
     dashboardLabel: 'Ir para o painel CLP',
     moreLabel: 'Saiba mais sobre o CLP',
     moreHref: 'https://rankingdecompetitividade.org.br/',
@@ -91,41 +93,19 @@ const studyCards: StudyCard[] = [
     chipsLabel: 'Dimensões',
     chips: ['Instituições', 'Sociedade', 'Economia'].map((label) => ({ label })),
     source: 'Centro de Liderança Pública (CLP)',
-    period: '2015–2025',
+    period: '2015 - 2025',
     dashboardLabel: 'Ir para o painel CLP',
     moreLabel: 'Saiba mais sobre o CLP',
     moreHref: 'https://rankingdecompetitividade.org.br/',
   },
 ]
 
-type AssistantTileTone = 'base' | 'dark' | 'faint'
-
-const assistantTileColors: Record<AssistantTileTone, string> = {
-  base: 'rgba(3, 78, 162, .8)',
-  dark: 'rgba(6, 63, 125, .7)',
-  faint: 'rgba(2, 62, 130, .2)',
-}
-
-/** Fileiras dos quadrados do assistente: duas no topo e uma encostada na base de 360px. */
-const assistantTileRows = [0, 80, 280]
-
-const assistantExtensionTiles = [
-  ...Array.from({ length: 80 }, (_, index) => index - 80),
-  ...Array.from({ length: 80 }, (_, index) => index + 18),
-].flatMap((columnIndex) => assistantTileRows.flatMap((top, rowIndex) => {
-  const variation = Math.abs((columnIndex * 5) + (rowIndex * 7) + (columnIndex * rowIndex * 3)) % 11
-  if (variation > 2) return []
-
-  const tone: AssistantTileTone = variation === 0 ? 'base' : variation === 1 ? 'dark' : 'faint'
-  return [{ columnIndex, top, tone }]
-}))
-
 // Classes escritas por extenso: o Tailwind descarta da camada de componentes as que só aparecem montadas.
 const chipClassNames = { blue: 'study-tag study-tag-blue', green: 'study-tag study-tag-green' }
 
-function Badge({ children, icon, iconWidth, tone = 'light' }: { children: React.ReactNode; icon: string; iconWidth: number; tone?: 'light' | 'dark' }) {
+function Badge({ children, icon, iconWidth }: { children: React.ReactNode; icon: string; iconWidth: number }) {
   return (
-    <p className={tone === 'dark' ? 'home-badge home-badge-dark' : 'home-badge'}>
+    <p className="home-badge">
       <img alt="" aria-hidden="true" height="18" src={icon} width={iconWidth} />
       {children}
     </p>
@@ -213,7 +193,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                   </dl>
                   {card.id === 'ibid' && (
                     <div className="home-study-groups">
-                      <p>2 grupos</p>
+                      <p>Grupos</p>
                       <div>
                         <span className="study-legend-item study-legend-blue">
                           <img alt="" aria-hidden="true" height="6" src="/assets/study-dot-context.svg" width="6" />
@@ -228,7 +208,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                     </div>
                   )}
                   <p className="home-study-chips-label">{card.chipsLabel}</p>
-                  <ul className={card.id === 'ibid' ? 'home-study-chips home-study-chips-wide' : 'home-study-chips'}>
+                  <ul className="home-study-chips">
                     {card.chips.map(({ label, tone }) => (
                       <li className={tone ? chipClassNames[tone] : 'study-tag'} key={label}>{label}</li>
                     ))}
@@ -287,50 +267,8 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section className="home-assistant" aria-labelledby="assistant-title" data-node-id="3019:1960">
-        <div aria-hidden="true" className="home-assistant-grid">
-          <span /><span /><span /><span /><span /><span /><span /><span />
-          {assistantExtensionTiles.map(({ columnIndex, top, tone }) => (
-            <span
-              className="home-assistant-extension-tile"
-              key={`${columnIndex}-${top}`}
-              style={{
-                backgroundColor: assistantTileColors[tone],
-                borderColor: tone === 'dark' ? 'rgba(222, 240, 255, .35)' : 'rgba(222, 230, 255, .35)',
-                left: `calc(50% - 720px + ${columnIndex * 80}px)`,
-                top,
-              }}
-            />
-          ))}
-        </div>
-        <div className="home-assistant-inner">
-          <div className="home-assistant-copy">
-            <div>
-              <Badge icon="/assets/badge-isotipo-assistant.svg" iconWidth={13} tone="dark">Assistente do painel</Badge>
-              <h2 id="assistant-title">Converse com o <span>Edson</span></h2>
-              <p>
-                Nosso assistente conhece os dois estudos e responde suas perguntas sobre índices, metodologias, comparações
-                entre estados e regiões, pilares, dimensões e indicadores do IBID e CLP em linguagem simples
-              </p>
-            </div>
-            <div className="home-assistant-actions">
-              <button aria-describedby="assistant-edson-unavailable" className="home-assistant-action" disabled type="button">
-                Converse com o assistente Edson
-              </button>
-              <p className="home-assistant-unavailable" id="assistant-edson-unavailable" role="status">
-                Edson está desativado no momento.
-              </p>
-            </div>
-          </div>
-          <img
-            alt="Visualização abstrata do assistente Edson"
-            className="home-assistant-art"
-            height="224"
-            src="/assets/assistant-edson.png"
-            width="232"
-          />
-        </div>
-      </section>
+      <HomeAssistantV3 />
+      <HomeNewsV3 />
     </main>
   )
 }

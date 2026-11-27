@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Rubik:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Rubik:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -106,7 +106,7 @@
     gap: 8px;
     margin: 0;
     border: 1px solid #b7d6f3;
-    border-radius: 20px;
+    border-radius: 6px;
     background: #dceaf9;
     padding: 6px 14px 6px 10px;
     color: #034ea2;
@@ -118,11 +118,6 @@
     white-space: nowrap;
   }
   .home-badge img { height: 18px; max-width: none; }
-  .home-badge-dark {
-    border-color: rgba(255, 255, 255, .22);
-    background: rgba(255, 255, 255, .08);
-    color: #91c9ff;
-  }
 
   .home-hero {
     position: relative;
@@ -597,7 +592,7 @@
     justify-content: space-between;
     overflow: hidden;
     border: 1px solid #dceaf9;
-    border-radius: 20px;
+    border-radius: 6px;
     background: linear-gradient(180deg, #fff 0%, #f3f8fe 100%);
     padding: 28px;
     box-shadow: 0 12px 32px -8px rgba(3, 28, 61, .06);
@@ -623,12 +618,12 @@
     justify-content: center;
     overflow: hidden;
     border: 1px solid #dceaf9;
-    border-radius: 32px;
+    border-radius: 6px;
     background: #fff;
   }
   .home-study-logo img { display: block; max-width: none; height: auto; object-fit: cover; }
   .home-study-scope {
-    border-radius: 20px;
+    border-radius: 6px;
     background: #dceaf9;
     padding: 4px 10px;
     color: #034ea2;
@@ -668,7 +663,7 @@
     display: flex;
     width: 100%;
     margin: 0;
-    border-radius: 14px;
+    border-radius: 6px;
     background: #eef4fc;
     padding: 14px 0;
   }
@@ -747,9 +742,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 100px;
+    border-radius: 6px;
     background: rgba(128, 152, 172, .2);
-    padding: 2px 4px;
+    padding: 3px 10px;
     color: #4c6379;
     font-family: Inter, sans-serif;
     font-size: 13px;
@@ -757,7 +752,6 @@
     line-height: normal;
     white-space: nowrap;
   }
-  .home-study-chips-wide .study-tag { padding: 2px 8px; }
   .study-tag-blue { background: rgba(11, 79, 145, .2); color: #0b4f91; }
   .study-tag-green { background: rgba(46, 125, 79, .2); color: #2e7d4f; }
   .home-study-meta {
@@ -791,7 +785,7 @@
     justify-content: center;
     gap: 8px;
     border: 0;
-    border-radius: 20px;
+    border-radius: 6px;
     background: #034ea2;
     padding: 0 20px;
     color: #fff;
@@ -850,103 +844,6 @@
   .home-studies-decoration span:nth-child(10) { right: 80px; top: 560px; background: #023e82; opacity: .2; }
   .home-studies-decoration span:nth-child(11) { left: 0; top: 639px; opacity: .2; }
 
-  .home-assistant {
-    position: relative;
-    height: 360px;
-    overflow: hidden;
-    background: #012e66;
-    font-family: Montserrat, sans-serif;
-  }
-  .home-assistant-inner {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    height: 252px;
-    align-items: center;
-    justify-content: space-between;
-    margin: 54px 40px 0;
-  }
-  .home-assistant-copy {
-    display: flex;
-    width: 640px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 32px;
-  }
-  .home-assistant-copy > div {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-  .home-assistant h2 {
-    width: 651px;
-    margin: 0;
-    color: #fff;
-    font-size: 32px;
-    font-weight: 600;
-    line-height: 1.25;
-  }
-  .home-assistant h2 span { color: #72b3f4; }
-  .home-assistant-copy > div > p:last-child {
-    width: 651px;
-    margin: 0;
-    color: #b9e2ff;
-    font-size: 16px;
-    font-weight: 400;
-    line-height: 1.5;
-  }
-  .home-assistant-actions { gap: 8px !important; }
-  .home-assistant-action {
-    display: inline-flex;
-    height: 44px;
-    align-items: center;
-    border: 0;
-    border-radius: 50px;
-    background: #fff;
-    padding: 0 20px;
-    color: #034ea2;
-    font-size: 14px;
-    font-weight: 600;
-    line-height: normal;
-    white-space: nowrap;
-    cursor: not-allowed;
-    opacity: .72;
-  }
-  .home-assistant-unavailable {
-    width: auto !important;
-    color: #ffd98a !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-  }
-  .home-assistant-art {
-    display: block;
-    width: 232px;
-    height: 224px;
-    max-width: none;
-    object-fit: cover;
-    filter: drop-shadow(0 4px 15px rgba(0, 0, 0, .25));
-  }
-  .home-assistant-grid {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
-  .home-assistant-grid span {
-    position: absolute;
-    width: 80px;
-    height: 80px;
-    border: .05px solid rgba(222, 230, 255, .35);
-    background: rgba(3, 78, 162, .8);
-  }
-  .home-assistant-grid span:nth-child(1) { left: calc(50% - 131px); top: 0; }
-  .home-assistant-grid span:nth-child(2) { left: calc(50% - 51px); top: 0; border-color: rgba(222, 240, 255, .35); background: rgba(6, 63, 125, .7); }
-  .home-assistant-grid span:nth-child(3) { left: calc(50% + 109px); top: 80px; border-color: rgba(222, 240, 255, .35); background: rgba(6, 63, 125, .7); }
-  .home-assistant-grid span:nth-child(4) { left: calc(50% + 189px); top: 0; }
-  .home-assistant-grid span:nth-child(5) { left: calc(50% + 29px); top: 280px; background: rgba(2, 62, 130, .2); }
-  .home-assistant-grid span:nth-child(6) { left: calc(50% + 349px); top: 0; border-color: rgba(222, 240, 255, .35); background: rgba(6, 63, 125, .7); }
-  .home-assistant-grid span:nth-child(7) { left: calc(50% + 269px); top: 280px; }
-  .home-assistant-grid span:nth-child(8) { left: calc(50% - 291px); top: 280px; border-color: rgba(222, 240, 255, .35); background: rgba(6, 63, 125, .7); }
   .purpose-card { @apply min-h-[256px] rounded-xl p-4 shadow-card; background: linear-gradient(112deg, #0755aa 0%, #0d5caf 42%, #b7ccec 108%); }
   .development-notice { @apply mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950 shadow-sm; }
   .development-notice svg { @apply mt-0.5 text-amber-600; }
@@ -1745,19 +1642,6 @@
   .home-studies-heading > p:last-child { font-size: 13px; line-height: 1.4; }
   .home-study-card { width: 100%; flex: 0 0 100%; padding: 24px 20px; }
   .home-studies-decoration { display: none; }
-  .home-assistant { height: auto; }
-  .home-assistant-inner {
-    height: auto;
-    margin: 0;
-    padding: 32px 20px;
-  }
-  .home-assistant-copy { width: 100%; gap: 24px; }
-  .home-assistant h2, .home-assistant-copy > div > p:last-child { width: 100%; }
-  .home-assistant h2 { font-size: 26px; }
-  .home-assistant-copy > div > p:last-child { font-size: 14px; }
-  .home-assistant-action { font-size: 13px; }
-  .home-assistant-art { display: none; }
-  .home-assistant-grid { mask-image: linear-gradient(90deg, transparent 15%, #000 45%, #000 100%); opacity: .7; }
   .update-strip span { width: 100%; white-space: normal; }
   .detail-table-shell { display: none; }
   .detail-mobile-table-view { display: block; }
