@@ -77,7 +77,7 @@ export function HeaderIntegration({
         searchPlaceholder="Buscar no EvidencIA"
         utilityLabel="Site SIA"
       />
-      {dataMeta && (
+      {page !== 'sobre' && dataMeta && (
         <div className="update-strip">
           <span>
             <CalendarClock aria-hidden="true" size={18} />
