@@ -1,101 +1,13 @@
 import { useRef, useState } from 'react'
+import { HomeAssistantV3 } from './HomeAssistantV3'
+import { HomeNewsV3 } from './HomeNewsV3'
+import { HomeV3Intro } from './HomeV3Intro'
 
 type StudyPage = 'ibid' | 'clp-estados' | 'clp-municipios'
 
 interface AboutPageProps {
   onNavigate: (page: StudyPage) => void
 }
-
-interface HeroTile {
-  side: 'left' | 'right'
-  /** Distância até a borda do lado escolhido. */
-  offset: number
-  /** Posição vertical no hero de 400px; as duas fileiras de baixo ficam presas à base. */
-  top: number
-  color: string
-}
-
-const heroTiles: HeroTile[] = [
-  { side: 'left', offset: 0, top: 0, color: '#eef4fc' },
-  { side: 'left', offset: 80, top: 0, color: '#e3eefa' },
-  { side: 'left', offset: 240, top: 0, color: '#eef4fc' },
-  { side: 'left', offset: 560, top: 0, color: '#eef4fc' },
-  { side: 'left', offset: 0, top: 80, color: '#e3eefa' },
-  { side: 'left', offset: 0, top: 240, color: '#eef4fc' },
-  { side: 'left', offset: 0, top: 320, color: 'rgba(3, 78, 162, .8)' },
-  { side: 'left', offset: 80, top: 320, color: '#c9ddf4' },
-  { side: 'left', offset: 160, top: 320, color: '#e3eefa' },
-  { side: 'left', offset: 400, top: 320, color: '#eef4fc' },
-  { side: 'left', offset: 640, top: 320, color: '#e3eefa' },
-  { side: 'right', offset: 0, top: 0, color: '#034ea2' },
-  { side: 'right', offset: 160, top: 0, color: '#e3eefa' },
-  { side: 'right', offset: 320, top: 0, color: '#c9ddf4' },
-  { side: 'right', offset: 0, top: 80, color: '#c9ddf4' },
-  { side: 'right', offset: 400, top: 80, color: '#034ea2' },
-  { side: 'right', offset: 480, top: 160, color: '#e3eefa' },
-  { side: 'right', offset: 0, top: 240, color: '#0b5db8' },
-  { side: 'right', offset: 320, top: 240, color: '#e3eefa' },
-  { side: 'right', offset: 480, top: 240, color: '#c9ddf4' },
-  { side: 'right', offset: 0, top: 320, color: '#034ea2' },
-  { side: 'right', offset: 80, top: 320, color: '#c9ddf4' },
-  { side: 'right', offset: 320, top: 320, color: '#c9ddf4' },
-  { side: 'right', offset: 400, top: 320, color: '#08478d' },
-]
-
-const mapLegendColors = ['#b4cdec', '#7ba3db', '#3473c4', '#0b4a9c']
-
-const historyLegend = [
-  { label: 'Estado', color: '#031d3c' },
-  { label: 'Região', color: '#9aa6b8' },
-  { label: 'Brasil', color: '#7b5cf0' },
-]
-
-/** Mapa de calor do cartão "Evolução por pilar": seis anos por pilar. */
-const pillarHeatmap = [
-  { label: 'Instituições', cells: ['#b4c8e5', '#bdcfe9', '#bdcfe9', '#e2ecf8', '#698fc6', '#aac1e1'] },
-  { label: 'Capital humano', cells: ['#bdcfe9', '#b4c8e5', '#bdcfe9', '#bdcfe9', '#b4c8e5', '#8eacd6'] },
-  { label: 'Infraestrutura', cells: ['#85a5d2', '#85a5d2', '#7c9dce', '#7396ca', '#85a5d2', '#98b3da'] },
-  { label: 'Economia', cells: ['#7396ca', '#698fc6', '#4473b7', '#1f56a8', '#4d7abb', '#7c9dce'] },
-  { label: 'Negócios', cells: ['#4d7abb', '#4473b7', '#4473b7', '#4d7abb', '#98b3da', '#b4c8e5'] },
-  { label: 'Conhec. e tecnologia', cells: ['#d9e5f4', '#98b3da', '#a1badd', '#bdcfe9', '#aac1e1', '#3b6bb3'] },
-  { label: 'Economia criativa', cells: ['#aac1e1', '#aac1e1', '#a1badd', '#aac1e1', '#a1badd', '#98b3da'] },
-]
-
-const purposeHighlights = [
-  {
-    title: 'Dois estudos',
-    icon: '/assets/purpose-studies.svg',
-    text: ['IBID (INPI) e CLP avaliam os estados sob óticas complementares: instituições, capital humano, infraestrutura, economia, negócios e conhecimento.'],
-  },
-  {
-    title: 'Comparação livre',
-    icon: '/assets/purpose-comparison.svg',
-    text: ['Escolha qualquer estado e compare com outro estado e com a média da sua região — em ranking, pontuação, série histórica, pilar, dimensão e indicador.'],
-  },
-  {
-    title: 'Cobertura',
-    icon: '/assets/purpose-coverage.svg',
-    text: ['27 unidades federativas + 5 regiões. Recorte municipal na base CLP.', 'Série histórica: IBID 2014–2026 · CLP 2015–2025.'],
-  },
-]
-
-/** Quadradinhos da composição de imagem do propósito, antes e depois do recorte das pessoas. */
-const purposePixelsBehind = [
-  { left: 110, top: 90, color: '#034ea2' },
-  { left: 150, top: 50, color: '#b7d6f3' },
-  { left: 70, top: 130, color: '#61a5d7' },
-  { left: 190, top: 10, color: '#dceaf9' },
-  { left: 30, top: 90, color: 'rgba(183, 214, 243, .8)' },
-]
-
-const purposePixelsFront = [
-  { left: 390, top: 390, color: '#034ea2' },
-  { left: 270, top: 470, color: 'rgba(183, 214, 243, .7)' },
-  { left: 430, top: 390, color: '#dceaf9' },
-  { left: 390, top: 350, color: '#61a5d7' },
-  { left: 310, top: 430, color: '#b7d6f3' },
-  { left: 350, top: 390, color: '#031d3c' },
-]
 
 interface StudyCard {
   id: string
@@ -109,6 +21,7 @@ interface StudyCard {
   chipsLabel: string
   chips: Array<{ label: string; tone?: 'blue' | 'green' }>
   source: string
+  period: string
   dashboardLabel: string
   moreLabel: string
   moreHref: string
@@ -134,7 +47,8 @@ const studyCards: StudyCard[] = [
       { label: 'Economia Criativa', tone: 'green' },
       { label: 'Conhecimento e Tecnologia', tone: 'green' },
     ],
-    source: 'INPI – Coordenação-Geral de Economia e Inovação',
+    source: 'INPI, Coordenação-Geral de Economia e Inovação',
+    period: '2015 - 2025',
     dashboardLabel: 'Ir para o painel IBID',
     moreLabel: 'Saiba mais sobre o IBID',
     moreHref: 'https://www.gov.br/inpi/pt-br/inpi-data/indice-brasil-de-inovacao-e-desenvolvimento-ibid',
@@ -162,6 +76,7 @@ const studyCards: StudyCard[] = [
       'Sustentabilidade Social',
     ].map((label) => ({ label })),
     source: 'Centro de Liderança Pública (CLP)',
+    period: '2015 - 2025',
     dashboardLabel: 'Ir para o painel CLP',
     moreLabel: 'Saiba mais sobre o CLP',
     moreHref: 'https://rankingdecompetitividade.org.br/',
@@ -178,41 +93,19 @@ const studyCards: StudyCard[] = [
     chipsLabel: 'Dimensões',
     chips: ['Instituições', 'Sociedade', 'Economia'].map((label) => ({ label })),
     source: 'Centro de Liderança Pública (CLP)',
+    period: '2015 - 2025',
     dashboardLabel: 'Ir para o painel CLP',
     moreLabel: 'Saiba mais sobre o CLP',
     moreHref: 'https://rankingdecompetitividade.org.br/',
   },
 ]
 
-type AssistantTileTone = 'base' | 'dark' | 'faint'
-
-const assistantTileColors: Record<AssistantTileTone, string> = {
-  base: 'rgba(3, 78, 162, .8)',
-  dark: 'rgba(6, 63, 125, .7)',
-  faint: 'rgba(2, 62, 130, .2)',
-}
-
-/** Fileiras dos quadrados do assistente: duas no topo e uma encostada na base de 360px. */
-const assistantTileRows = [0, 80, 280]
-
-const assistantExtensionTiles = [
-  ...Array.from({ length: 80 }, (_, index) => index - 80),
-  ...Array.from({ length: 80 }, (_, index) => index + 18),
-].flatMap((columnIndex) => assistantTileRows.flatMap((top, rowIndex) => {
-  const variation = Math.abs((columnIndex * 5) + (rowIndex * 7) + (columnIndex * rowIndex * 3)) % 11
-  if (variation > 2) return []
-
-  const tone: AssistantTileTone = variation === 0 ? 'base' : variation === 1 ? 'dark' : 'faint'
-  return [{ columnIndex, top, tone }]
-}))
-
 // Classes escritas por extenso: o Tailwind descarta da camada de componentes as que só aparecem montadas.
 const chipClassNames = { blue: 'study-tag study-tag-blue', green: 'study-tag study-tag-green' }
-const heroTileClassNames = { left: 'home-hero-tile home-hero-tile-left', right: 'home-hero-tile home-hero-tile-right' }
 
-function Badge({ children, icon, iconWidth, tone = 'light' }: { children: React.ReactNode; icon: string; iconWidth: number; tone?: 'light' | 'dark' }) {
+function Badge({ children, icon, iconWidth }: { children: React.ReactNode; icon: string; iconWidth: number }) {
   return (
-    <p className={tone === 'dark' ? 'home-badge home-badge-dark' : 'home-badge'}>
+    <p className="home-badge">
       <img alt="" aria-hidden="true" height="18" src={icon} width={iconWidth} />
       {children}
     </p>
@@ -255,167 +148,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
 
   return (
     <main className="home-page">
-      <aside aria-label="Aviso de desenvolvimento" className="home-development-notice">
-        <strong>Plataforma em desenvolvimento</strong>
-        <span>Este painel está em processo de desenvolvimento e pode passar por ajustes.</span>
-      </aside>
-      <section className="home-hero" aria-labelledby="home-title" data-node-id="3019:1100">
-        <div aria-hidden="true" className="home-hero-tiles">
-          {heroTiles.map(({ side, offset, top, color }) => (
-            <span
-              className={heroTileClassNames[side]}
-              key={`${side}-${offset}-${top}`}
-              style={{
-                backgroundColor: color,
-                [side]: offset,
-                ...(top >= 240 ? { bottom: 320 - top } : { top }),
-              }}
-            />
-          ))}
-        </div>
-
-        <div className="home-hero-copy">
-          <h1 id="home-title">
-            <img alt="EvidencIA Inovação" height="84" src="/assets/hero-logo-evidencia.svg" width="317" />
-          </h1>
-          <p>
-            Painel de evidências que acompanha o desempenho do Piauí nos índices de inovação e competitividade,
-            reunindo dados do IBID e do CLP para comparar estados, regiões e municípios. Ficou com dúvida?
-            O <strong>Edson</strong>, nosso assistente, explica os índices em linguagem simples.
-          </p>
-          <div className="home-hero-actions">
-            <button className="home-hero-action-primary" onClick={scrollToStudies} type="button">
-              Explorar os índices
-            </button>
-            <button
-              aria-describedby="edson-unavailable-notice"
-              className="home-hero-action-secondary"
-              disabled
-              type="button"
-            >
-              Converse com o Edson
-            </button>
-          </div>
-          <div className="home-edson-unavailable" id="edson-unavailable-notice" role="status">
-            Edson está desativado no momento.
-          </div>
-        </div>
-
-        <div aria-hidden="true" className="home-hero-graphics" data-node-id="3019:1139">
-          <img alt="" className="home-hero-accent-circle" height="64" src="/assets/hero-accent-circle.svg" width="64" />
-          <img alt="" className="home-hero-accent-light" height="14" src="/assets/hero-accent-dot-light.svg" width="14" />
-          <img alt="" className="home-hero-accent-dark" height="10" src="/assets/hero-accent-dot-dark.svg" width="10" />
-
-          <div className="hero-card hero-card-map">
-            <strong>Mapa do Brasil por nota</strong>
-            <span className="hero-card-caption">Nota geral por estado</span>
-            <img alt="" className="hero-map" height="205" src="/assets/hero-brazil-map.svg" width="200" />
-            <div className="hero-map-legend">
-              {mapLegendColors.map((color) => <span key={color} style={{ backgroundColor: color }} />)}
-              menor → maior nota
-            </div>
-            <span className="hero-map-tag">
-              <img alt="" height="6" src="/assets/hero-selected-dot.svg" width="6" />
-              Estado selecionado
-            </span>
-          </div>
-
-          <div className="hero-card hero-card-glass hero-card-ranking">
-            <strong>Posição no ranking</strong>
-            <span className="hero-card-caption">Nacional e regional, ano a ano</span>
-            <span className="hero-ranking-badge">
-              <img alt="" height="10" src="/assets/hero-ranking-icon.svg" width="10" />
-              Ranking
-            </span>
-            <img alt="" className="hero-ranking-line" height="64" src="/assets/hero-ranking-line.svg" width="196" />
-          </div>
-
-          <div className="hero-card hero-card-glass hero-card-history">
-            <strong>Série histórica</strong>
-            <div className="hero-history-legend">
-              {historyLegend.map(({ label, color }) => (
-                <span key={label}><i style={{ backgroundColor: color }} />{label}</span>
-              ))}
-            </div>
-            <img alt="" className="hero-history-lines" height="48" src="/assets/hero-history-lines.svg" width="150" />
-          </div>
-
-          <div className="hero-card hero-card-pillars">
-            <strong>Evolução por pilar</strong>
-            <span className="hero-card-caption">Posição de cada pilar ao longo dos anos</span>
-            <div className="hero-pillar-grid">
-              {pillarHeatmap.map(({ label, cells }) => (
-                <div className="hero-pillar-row" key={label}>
-                  <span>{label}</span>
-                  {cells.map((color, index) => <i key={index} style={{ backgroundColor: color }} />)}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="hero-ranking-pill">
-            <img alt="" height="28" src="/assets/hero-trend-icon.svg" width="28" />
-            <span>
-              <strong>Posições no ranking</strong>
-              Nacional e regional, por pilar
-            </span>
-          </div>
-        </div>
-      </section>
-
-      <section className="home-purpose" aria-labelledby="purpose-title" data-node-id="3019:1346">
-        <div className="home-purpose-content">
-          <div aria-hidden="true" className="home-purpose-art">
-            <img alt="" className="purpose-photo" height="484" loading="lazy" src="/assets/purpose-photo.png" width="424" />
-            <div className="purpose-photo-blur">
-              <img alt="" height="428" loading="lazy" src="/assets/purpose-photo-blur.png" width="368" />
-            </div>
-            <img alt="" className="purpose-photo-border" height="420" src="/assets/purpose-photo-border.svg" width="360" />
-            {purposePixelsBehind.map(({ left, top, color }) => (
-              <span className="purpose-pixel" key={`${left}-${top}`} style={{ left, top, backgroundColor: color }} />
-            ))}
-            <div className="purpose-people">
-              <img alt="" height="347" loading="lazy" src="/assets/purpose-people.png" width="520" />
-            </div>
-            {purposePixelsFront.map(({ left, top, color }) => (
-              <span className="purpose-pixel" key={`${left}-${top}`} style={{ left, top, backgroundColor: color }} />
-            ))}
-            <div className="purpose-ranking-card">
-              <strong>Evolução no ranking</strong>
-              <span>Ano a ano, por estado</span>
-              <img alt="" height="46" src="/assets/purpose-ranking-line.svg" width="172" />
-            </div>
-            <div className="purpose-seal">
-              <img alt="" height="67.76" src="/assets/purpose-isotipo.svg" width="51" />
-            </div>
-          </div>
-
-          <div className="home-purpose-text">
-            <Badge icon="/assets/badge-isotipo-purpose.svg" iconWidth={13}>Propósito do painel</Badge>
-            <h2 id="purpose-title">
-              Acompanhar, de forma contínua e comparável, a posição do Piauí nos principais índices de{' '}
-              <span>inovação</span> e <span>competitividade</span> do país.
-            </h2>
-            <p className="home-purpose-description">
-              Dois estudos independentes, lidos lado a lado, para mostrar onde o estado avança, onde perde posição e
-              como se compara ao Brasil e à sua região.
-            </p>
-            <ul className="home-purpose-highlights">
-              {purposeHighlights.map(({ title, icon, text }) => (
-                <li key={title}>
-                  <span className="home-purpose-icon">
-                    <img alt="" aria-hidden="true" height="22" src={icon} width="22" />
-                  </span>
-                  <div>
-                    <h3>{title}</h3>
-                    <p>{text.map((line, index) => <span key={index}>{line}</span>)}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
+      <HomeV3Intro onExplore={scrollToStudies} />
 
       <section className="home-studies" aria-labelledby="studies-title" data-node-id="3019:1598">
         <div aria-hidden="true" className="home-studies-decoration">
@@ -460,7 +193,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                   </dl>
                   {card.id === 'ibid' && (
                     <div className="home-study-groups">
-                      <p>2 grupos</p>
+                      <p>Grupos</p>
                       <div>
                         <span className="study-legend-item study-legend-blue">
                           <img alt="" aria-hidden="true" height="6" src="/assets/study-dot-context.svg" width="6" />
@@ -475,14 +208,14 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
                     </div>
                   )}
                   <p className="home-study-chips-label">{card.chipsLabel}</p>
-                  <ul className={card.id === 'ibid' ? 'home-study-chips home-study-chips-wide' : 'home-study-chips'}>
+                  <ul className="home-study-chips">
                     {card.chips.map(({ label, tone }) => (
                       <li className={tone ? chipClassNames[tone] : 'study-tag'} key={label}>{label}</li>
                     ))}
                   </ul>
                   <div className="home-study-meta">
                     <p><strong>Fonte: </strong>{card.source}</p>
-                    <p><strong>Período: </strong>2015 - 2025</p>
+                    <p><strong>Período: </strong>{card.period}</p>
                     <p><strong>Atualização: </strong>Anual</p>
                   </div>
                 </div>
@@ -534,50 +267,8 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      <section className="home-assistant" aria-labelledby="assistant-title" data-node-id="3019:1960">
-        <div aria-hidden="true" className="home-assistant-grid">
-          <span /><span /><span /><span /><span /><span /><span /><span />
-          {assistantExtensionTiles.map(({ columnIndex, top, tone }) => (
-            <span
-              className="home-assistant-extension-tile"
-              key={`${columnIndex}-${top}`}
-              style={{
-                backgroundColor: assistantTileColors[tone],
-                borderColor: tone === 'dark' ? 'rgba(222, 240, 255, .35)' : 'rgba(222, 230, 255, .35)',
-                left: `calc(50% - 720px + ${columnIndex * 80}px)`,
-                top,
-              }}
-            />
-          ))}
-        </div>
-        <div className="home-assistant-inner">
-          <div className="home-assistant-copy">
-            <div>
-              <Badge icon="/assets/badge-isotipo-assistant.svg" iconWidth={13} tone="dark">Assistente do painel</Badge>
-              <h2 id="assistant-title">Converse com o <span>Edson</span></h2>
-              <p>
-                Nosso assistente conhece os dois estudos e responde suas perguntas sobre índices, metodologias, comparações
-                entre estados e regiões, pilares, dimensões e indicadores do IBID e CLP em linguagem simples
-              </p>
-            </div>
-            <div className="home-assistant-actions">
-              <button aria-describedby="assistant-edson-unavailable" className="home-assistant-action" disabled type="button">
-                Converse com o assistente Edson
-              </button>
-              <p className="home-assistant-unavailable" id="assistant-edson-unavailable" role="status">
-                Edson está desativado no momento.
-              </p>
-            </div>
-          </div>
-          <img
-            alt="Visualização abstrata do assistente Edson"
-            className="home-assistant-art"
-            height="224"
-            src="/assets/assistant-edson.png"
-            width="232"
-          />
-        </div>
-      </section>
+      <HomeAssistantV3 />
+      <HomeNewsV3 />
     </main>
   )
 }
